@@ -26,4 +26,9 @@ export const IMG = {
   tuyenquang: "/images/tuyen-quang.jpg",
   binhlieu: "/images/binh-lieu.jpg",
   hero: "/images/hero.jpg",
+  figmaHero: "/images/figma-hero.jpg",
+  figmaVinpearl: "/images/figma-vinpearl.jpg",
+  figmaAmbassador: "/images/figma-ambassador.jpg",
+  figmaSunworld: "/images/figma-sunworld.jpg",
+  figmaConsultant: "/images/figma-consultant.jpg",
 };

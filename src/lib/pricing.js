@@ -21,7 +21,7 @@ export const getDayType = (date) => {
   const iso = toISODate(date);
   if (holidayMap.has(iso)) return { id: "holiday", label: "Lễ / Tết", name: holidayMap.get(iso) };
   const dow = date.getDay(); // 0 = CN
-  if (dow === 5 || dow === 6 || dow === 0) return { id: "weekend", label: "Cuối tuần" };
+  if (dow === 0 || dow === 6) return { id: "weekend", label: "Cuối tuần" };
   if (LOW_SEASON_MONTHS.includes(date.getMonth())) return { id: "low", label: "Thấp điểm" };
   return { id: "weekday", label: "Ngày thường" };
 };
@@ -37,9 +37,23 @@ export const getPriceForDate = (service, date) => {
   if (!service) return 0;
   const type = getDayType(date);
   const base = service.price || 0;
+  if (service.fixedPrices) {
+    if (type.id === "weekend") return service.weekendPrice ?? Math.round(base * 1.12);
+    if (type.id === "holiday") return service.holidayPrice ?? Math.round(base * 1.35);
+    return base;
+  }
   const jitter = ((hash(`${service.id}-${toISODate(date)}`) % 5) - 2) / 100; // -2% .. +2%
   const value = base * factor[type.id] * (1 + jitter);
   return money(Math.max(value, base * 0.5));
+};
+
+/** Gói thay thế (cùng bậc giá) thay base; phụ thu / giảm giá thì cộng thêm. */
+export const quoteWithOption = (service, date, option) => {
+  const dayPrice = getPriceForDate(service, date);
+  if (!option) return dayPrice;
+  const alt = option.price > 0 && option.price >= service.price * 0.45;
+  if (!alt) return money(dayPrice + option.price);
+  return getPriceForDate({ ...service, id: `${service.id}::${option.name}`, price: option.price }, date);
 };
 
 export const getPriceRange = (service, year, month) => {
