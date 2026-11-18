@@ -1,16 +1,18 @@
 const TOKEN_KEY = "20travel_admin_token";
 
+const isLocalHostName = (host) => /^(localhost|127\.0\.0\.1|0\.0\.0\.0)$/i.test(host || "");
+
 export const getBaseUrl = () => {
   const runtime =
     typeof window !== "undefined" && window.__API_BASE_URL__ != null
       ? String(window.__API_BASE_URL__)
       : "";
   const env = import.meta.env.VITE_API_URL != null ? String(import.meta.env.VITE_API_URL) : "";
-  const isLocalHost =
-    typeof window !== "undefined" &&
-    /^(localhost|127\.0\.0\.1)$/i.test(window.location.hostname);
-  const fallback = isLocalHost ? "http://localhost:5000" : "";
-  const url = (runtime || env || fallback).trim();
+  const pageIsLocal = typeof window !== "undefined" && isLocalHostName(window.location.hostname);
+  const envIsLocal = /^https?:\/\/(localhost|127\.0\.0\.1|0\.0\.0\.0)(:\d+)?(\/|$)/i.test(env.trim());
+  const effectiveEnv = env && !(envIsLocal && !pageIsLocal) ? env : "";
+  const fallback = pageIsLocal ? "http://localhost:5000" : "";
+  const url = (runtime || effectiveEnv || fallback).trim();
   return url.replace(/\/+$/, "");
 };
 
