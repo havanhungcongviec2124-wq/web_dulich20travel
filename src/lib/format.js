@@ -10,8 +10,15 @@ export const formatCompact = (value) => {
   return String(value);
 };
 
+const toValidDate = (date) => {
+  if (!date) return null;
+  const d = date instanceof Date ? date : new Date(date);
+  return Number.isNaN(d.getTime()) ? null : d;
+};
+
 export const formatDate = (date, opts = {}) => {
-  const d = typeof date === "string" ? new Date(date) : date;
+  const d = toValidDate(date);
+  if (!d) return "—";
   return new Intl.DateTimeFormat("vi-VN", {
     day: "2-digit",
     month: "2-digit",
@@ -21,7 +28,8 @@ export const formatDate = (date, opts = {}) => {
 };
 
 export const formatDateLong = (date) => {
-  const d = typeof date === "string" ? new Date(date) : date;
+  const d = toValidDate(date);
+  if (!d) return "—";
   return new Intl.DateTimeFormat("vi-VN", {
     weekday: "long",
     day: "2-digit",
@@ -31,7 +39,8 @@ export const formatDateLong = (date) => {
 };
 
 export const toISODate = (date) => {
-  const d = typeof date === "string" ? new Date(date) : date;
+  const d = toValidDate(date);
+  if (!d) return "";
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
