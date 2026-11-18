@@ -168,8 +168,8 @@ export const consultants = [
     phone: "0976 688 861",
     zalo: "https://zalo.me/0976688861",
     facebook: "facebook.com/20travel.dophong",
-    status: "Hoạt động",
-    active: true,
+    status: "Tạm ẩn",
+    active: false,
     avatar: "/images/figma-consultant.jpg",
   },
 ];

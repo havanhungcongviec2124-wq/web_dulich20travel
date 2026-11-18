@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
+import { useSelector } from "react-redux";
 import {
   Building2,
   Clock,
@@ -12,7 +13,6 @@ import {
   Search,
   Send,
 } from "lucide-react";
-import { company, consultants, faqs, priceTables } from "../data/fake.data";
 import { cn } from "../lib/format";
 
 const FacebookIcon = (props) => (
@@ -21,35 +21,20 @@ const FacebookIcon = (props) => (
   </svg>
 );
 
-const quickContacts = [
-  {
-    id: "hotline",
-    label: "Hotline tư vấn",
-    value: company.hotline,
-    note: "Mỗi ngày 8:00 – 22:00",
-    href: `tel:${company.hotlineRaw}`,
-    icon: Phone,
-    cta: "Gọi ngay",
-  },
-  {
-    id: "zalo",
-    label: "Chat Zalo",
-    value: "036 271 5585",
-    note: "Phản hồi trong 5 phút",
-    href: company.zalo,
-    icon: MessageCircle,
-    cta: "Nhắn Zalo",
-  },
-  {
-    id: "facebook",
-    label: "Facebook",
-    value: "20 TRAVEL",
-    note: "Cập nhật giá và ưu đãi",
-    href: company.facebook,
-    icon: FacebookIcon,
-    cta: "Theo dõi",
-  },
-];
+const defaultCompany = {
+  brand: "20 TRAVEL",
+  legalName: "CÔNG TY CỔ PHẦN DU LỊCH QUỐC TẾ STK",
+  address: "Số 37 Ngõ 2 Phố Ngô Gia Khảm, Bồ Đề, Hà Nội",
+  hotline: "036 271 5585",
+  hotlineRaw: "0362715585",
+  officeHotline: "0936 878 000",
+  email: "info@stktravel.com",
+  facebook: "http://facebook.com/hoangthiendll",
+  zalo: "https://zalo.me/0362715585",
+  workingHours: "08:00 – 21:00 (T2 – CN)",
+  priceUpdatedAt: "16/11/2026",
+  paymentNote: "Thanh toán chuyển khoản hoặc tiền mặt 100% trước ngày khởi hành.",
+};
 
 const steps = [
   {
@@ -68,7 +53,43 @@ const steps = [
 
 const Contact = () => {
   const [open, setOpen] = useState(0);
-  const team = consultants.slice(0, 4);
+  const consultants = useSelector((s) => s.consultants?.items || []);
+  const content = useSelector((s) => s.content?.data);
+
+  const company = { ...defaultCompany, ...(content?.company || {}) };
+  const faqs = content?.info?.faqs || [];
+  const priceTables = content?.info?.priceTables || { bank: [] };
+  const team = useMemo(() => consultants.filter((c) => c.active !== false && c.status !== "Tạm ẩn").slice(0, 4), [consultants]);
+
+  const quickContacts = [
+    {
+      id: "hotline",
+      label: "Hotline tư vấn",
+      value: company.hotline,
+      note: "Mỗi ngày 8:00 – 22:00",
+      href: `tel:${company.hotlineRaw || "0362715585"}`,
+      icon: Phone,
+      cta: "Gọi ngay",
+    },
+    {
+      id: "zalo",
+      label: "Chat Zalo",
+      value: company.hotline,
+      note: "Phản hồi trong 5 phút",
+      href: company.zalo,
+      icon: MessageCircle,
+      cta: "Nhắn Zalo",
+    },
+    {
+      id: "facebook",
+      label: "Facebook",
+      value: company.brand || "20 TRAVEL",
+      note: "Cập nhật giá và ưu đãi",
+      href: company.facebook,
+      icon: FacebookIcon,
+      cta: "Theo dõi",
+    },
+  ];
 
   return (
     <main className="bg-[#F5F9FB]">
@@ -189,7 +210,7 @@ const Contact = () => {
             <div className="rounded-2xl bg-white p-6 lg:p-7">
               <h2 className="text-[15px] font-semibold text-ocean-950">Gọi cho chúng tôi</h2>
               <a
-                href={`tel:${company.hotlineRaw}`}
+                href={`tel:${company.hotlineRaw || "0362715585"}`}
                 className="mt-4 flex items-center gap-3 rounded-xl bg-ocean-600 px-5 py-4 text-white transition hover:bg-ocean-700"
               >
                 <Phone className="h-5 w-5" />
@@ -222,8 +243,8 @@ const Contact = () => {
             <div className="rounded-2xl bg-white p-6 lg:p-7">
               <h2 className="text-[15px] font-semibold text-ocean-950">Thông tin thanh toán</h2>
               <div className="mt-4 space-y-4">
-                {priceTables.bank.map((bank) => (
-                  <div key={bank.number} className="rounded-xl bg-ocean-50 px-4 py-3.5">
+                {(priceTables.bank || []).map((bank, i) => (
+                  <div key={bank.number || i} className="rounded-xl bg-ocean-50 px-4 py-3.5">
                     <p className="text-[10.5px] text-ink-500">{bank.note}</p>
                     <p className="mt-1 text-[12px] font-semibold text-ocean-900">{bank.name}</p>
                     <p className="mt-0.5 text-[11.5px] text-ink-600">
@@ -250,25 +271,25 @@ const Contact = () => {
 
           <div className="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:gap-6">
             {team.map((person) => (
-              <article key={person.id} className="flex flex-col rounded-2xl bg-ocean-50 p-5">
-                {person.image ? (
-                  <img src={person.image} alt={person.name} className="h-[112px] w-[92px] rounded-2xl object-cover" />
+              <article key={person._id || person.key || person.id || person.name} className="flex flex-col rounded-2xl bg-ocean-50 p-5">
+                {person.image || person.avatar ? (
+                  <img src={person.image || person.avatar} alt={person.name} className="h-[112px] w-[92px] rounded-2xl object-cover" />
                 ) : (
                   <span className="grid h-[92px] w-[92px] place-items-center rounded-2xl bg-white text-[24px] font-semibold text-sea-600">
-                    {person.initials}
+                    {(person.name || "?").split(" ").slice(-1)[0][0]}
                   </span>
                 )}
                 <h3 className="mt-4 text-[16px] font-semibold text-ocean-950">{person.name}</h3>
                 <p className="mt-1 text-[11px] text-ink-500">{person.role}</p>
                 <div className="mt-auto flex items-center gap-2 pt-4">
                   <a
-                    href={`tel:${person.phone.replace(/\s/g, "")}`}
+                    href={`tel:${String(person.phone || "").replace(/\s/g, "")}`}
                     className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg bg-white text-[11px] font-semibold text-ocean-800 ring-1 ring-ocean-100 transition hover:bg-sea-50"
                   >
                     <Phone className="h-3.5 w-3.5" /> Gọi
                   </a>
                   <a
-                    href={person.zalo}
+                    href={person.zalo || company.zalo}
                     target="_blank"
                     rel="noreferrer"
                     className="grid h-9 w-9 place-items-center rounded-lg bg-ocean-600 text-white transition hover:bg-ocean-700"
@@ -337,7 +358,7 @@ const Contact = () => {
             {faqs.map((faq, index) => {
               const active = open === index;
               return (
-                <div key={faq.q}>
+                <div key={faq.q || index}>
                   <button
                     type="button"
                     onClick={() => setOpen(active ? -1 : index)}

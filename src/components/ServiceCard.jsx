@@ -1,12 +1,13 @@
 import { Link } from "react-router-dom";
+import { useSelector } from "react-redux";
 import { ArrowUpRight, MapPin, Star } from "lucide-react";
 import { formatCurrency, cn, formatDate } from "../lib/format";
-import { helpers } from "../data/fake.data";
 
 const unitLabel = (service) => (service.priceUnit ? `/ ${service.priceUnit}` : "");
 
 export const CategoryPill = ({ categoryId, className }) => {
-  const cat = helpers.getCategory(categoryId);
+  const categories = useSelector((s) => s.catalog?.categories || []);
+  const cat = categories.find((c) => c.key === categoryId || c.id === categoryId);
   if (!cat) return null;
   return (
     <span

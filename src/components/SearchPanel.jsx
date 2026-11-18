@@ -1,15 +1,10 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
 import { MapPin, CalendarDays, Compass, Search, ChevronDown } from "lucide-react";
-import { categories, locations } from "../data/fake.data";
 import { toISODate, cn } from "../lib/format";
 
 const todayISO = toISODate(new Date());
-
-const options = [
-  { value: "", label: "Tất cả dịch vụ" },
-  ...categories.map((c) => ({ value: c.id, label: c.name })),
-];
 
 /**
  * Thanh tra cứu.
@@ -19,9 +14,31 @@ const options = [
  */
 const SearchPanel = ({ initial = {}, className, variant = "hero" }) => {
   const navigate = useNavigate();
+  const categories = useSelector((s) => s.catalog?.categories || []);
+  const locations = useSelector((s) => s.catalog?.locations || []);
   const [location, setLocation] = useState(initial.location || "");
   const [date, setDate] = useState(initial.date || "");
   const [category, setCategory] = useState(initial.category || "");
+
+  const options = useMemo(
+    () => [
+      { value: "", label: "Tất cả dịch vụ" },
+      ...categories
+        .filter((c) => c.status !== "Ẩn")
+        .map((c) => ({ value: c.key || c.id, label: c.name })),
+    ],
+    [categories]
+  );
+
+  const locationOptions = useMemo(() => {
+    const seen = new Set();
+    return (locations || []).filter((l) => {
+      const slug = l.slug || "";
+      if (!slug || seen.has(slug)) return false;
+      seen.add(slug);
+      return true;
+    });
+  }, [locations]);
 
   const onSubmit = (event) => {
     event.preventDefault();
@@ -44,8 +61,8 @@ const SearchPanel = ({ initial = {}, className, variant = "hero" }) => {
             <MapPin className="h-4 w-4 shrink-0 text-sea-600" />
             <select value={location} onChange={(e) => setLocation(e.target.value)} className={selectClass}>
               <option value="">Tất cả điểm đến</option>
-              {locations.map((item) => (
-                <option key={item.slug} value={item.slug}>{item.name}</option>
+              {locationOptions.map((item) => (
+                <option key={`page-${item.type || "loc"}-${item.slug}`} value={item.slug}>{item.name}</option>
               ))}
             </select>
             <ChevronDown className="pointer-events-none h-4 w-4 shrink-0 text-ink-500" />
@@ -104,8 +121,8 @@ const SearchPanel = ({ initial = {}, className, variant = "hero" }) => {
             <MapPin className="h-4 w-4 shrink-0 text-sea-600" />
             <select value={location} onChange={(e) => setLocation(e.target.value)} className={selectClass}>
               <option value="">Hạ Long, Quảng Ninh</option>
-              {locations.map((item) => (
-                <option key={item.slug} value={item.slug}>{item.name}</option>
+              {locationOptions.map((item) => (
+                <option key={`hero-m-${item.type || "loc"}-${item.slug}`} value={item.slug}>{item.name}</option>
               ))}
             </select>
             <ChevronDown className="pointer-events-none h-4 w-4 shrink-0 text-ink-500" />
@@ -170,8 +187,8 @@ const SearchPanel = ({ initial = {}, className, variant = "hero" }) => {
           <span className="relative flex items-center">
             <select value={location} onChange={(e) => setLocation(e.target.value)} className={selectClass}>
               <option value="">Bạn muốn đi đâu?</option>
-              {locations.map((item) => (
-                <option key={item.slug} value={item.slug}>{item.name}</option>
+              {locationOptions.map((item) => (
+                <option key={`hero-d-${item.type || "loc"}-${item.slug}`} value={item.slug}>{item.name}</option>
               ))}
             </select>
           </span>

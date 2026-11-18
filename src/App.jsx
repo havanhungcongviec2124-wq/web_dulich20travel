@@ -1,10 +1,17 @@
 import { useEffect } from "react";
 import { Outlet, useLocation } from "react-router-dom";
+import { useSelector } from "react-redux";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
+import { setHolidays } from "./lib/pricing";
 
 const App = () => {
   const { pathname, hash } = useLocation();
+  const holidays = useSelector((s) => s.content?.data?.info?.holidays);
+
+  useEffect(() => {
+    if (Array.isArray(holidays)) setHolidays(holidays);
+  }, [holidays]);
 
   useEffect(() => {
     if (hash) {

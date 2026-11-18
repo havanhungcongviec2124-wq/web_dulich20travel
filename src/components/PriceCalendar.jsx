@@ -1,16 +1,17 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { getDayType, getMonthMatrix, getPriceForDate } from "../lib/pricing";
+import { getDayType, getMonthMatrix, getPriceForDate, computePriceForDate } from "../lib/pricing";
 import { formatCurrency, cn, toISODate } from "../lib/format";
 
 const WEEKDAYS = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
 
 const monthLabel = (date) => `Tháng ${date.getMonth() + 1}, ${date.getFullYear()}`;
+const monthKey = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
 
 const compactPrice = (value) => {
-  const millions = value / 1000000;
+  const millions = Number(value || 0) / 1000000;
   if (millions >= 1) return `${millions.toFixed(2).replace(/\.?0+$/, "").replace(".", ",")}tr`;
-  return `${Math.round(value / 1000)}k`;
+  return `${Math.round(Number(value || 0) / 1000)}k`;
 };
 
 const LegendDot = ({ className }) => (
@@ -18,11 +19,24 @@ const LegendDot = ({ className }) => (
 );
 
 /** Lịch giá đúng Figma: ô 103×61 desktop, 43×45 mobile, gap 7/4. */
-const PriceCalendar = ({ service, value, onChange }) => {
+const PriceCalendar = ({ service, value, onChange, pricing, onMonthChange }) => {
   const selectedDate = value ? new Date(`${value}T00:00:00`) : new Date();
   const [cursor, setCursor] = useState(
     () => new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1)
   );
+
+  useEffect(() => {
+    if (value) {
+      const d = new Date(`${value}T00:00:00`);
+      if (!Number.isNaN(d.getTime())) {
+        setCursor((prev) => (prev.getFullYear() === d.getFullYear() && prev.getMonth() === d.getMonth() ? prev : new Date(d.getFullYear(), d.getMonth(), 1)));
+      }
+    }
+  }, [value]);
+
+  useEffect(() => {
+    onMonthChange?.(monthKey(cursor));
+  }, [cursor, onMonthChange]);
 
   const weeks = useMemo(() => getMonthMatrix(cursor.getFullYear(), cursor.getMonth()), [cursor]);
   const shift = (delta) =>
@@ -31,6 +45,9 @@ const PriceCalendar = ({ service, value, onChange }) => {
   const prevLabel = monthLabel(new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1));
   const nextLabel = monthLabel(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1));
 
+  const rule = pricing?.rule || null;
+  const priceOf = (date) => (pricing ? computePriceForDate(service, date, pricing) : getPriceForDate(service, date, rule));
+
   return (
     <div>
       <div className="relative flex items-center justify-between">
@@ -38,7 +55,7 @@ const PriceCalendar = ({ service, value, onChange }) => {
           type="button"
           aria-label={`Xem ${prevLabel}`}
           onClick={() => shift(-1)}
-          className="grid h-[47px] w-[43px] place-items-center rounded-[6px] bg-ocean-50 text-ocean-800 transition hover:bg-ocean-100 lg:h-[45px] lg:w-[42px]"
+          className="grid h-11.75 w-10.75 place-items-center rounded-md bg-ocean-50 text-ocean-800 transition hover:bg-ocean-100 lg:h-[45px] lg:w-[42px]"
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
@@ -71,8 +88,8 @@ const PriceCalendar = ({ service, value, onChange }) => {
             return <div key={`empty-${index}`} className="h-[45px] rounded-lg md:h-[61px]" />;
           }
           const iso = toISODate(date);
-          const type = getDayType(date);
-          const price = getPriceForDate(service, date);
+          const type = getDayType(date, rule);
+          const price = priceOf(date);
           const active = value === iso;
 
           return (
@@ -82,8 +99,8 @@ const PriceCalendar = ({ service, value, onChange }) => {
               onClick={() => onChange(iso)}
               aria-pressed={active}
               className={cn(
-                "flex h-[45px] flex-col items-start justify-between rounded-lg px-[7px] py-[5px] text-left transition md:h-[61px] md:px-[9px] md:py-[6px]",
-                type.id === "weekend" ? "bg-sea-50" : "bg-ocean-50",
+                "flex h-11.25 flex-col cursor-pointer items-start justify-between rounded-lg px-1.75 py-1.25 text-left transition md:h-15.25 md:px-2.25 md:py-1.5",
+                type.id === "weekend" ? "border-2 border-ocean-600" : type.id === "holiday" ? "bg-amber-50" : type.id === "otherDays" ? "bg-sky-50" : "bg-ocean-50",
                 active && "bg-ocean-600",
                 !active && "hover:bg-ocean-100/70"
               )}
@@ -119,7 +136,7 @@ const PriceCalendar = ({ service, value, onChange }) => {
           <LegendDot className="bg-ocean-50 ring-1 ring-ocean-100" /> Ngày thường
         </span>
         <span className="inline-flex items-center gap-2">
-          <LegendDot className="bg-sea-50 ring-1 ring-sea-100" /> Cuối tuần
+          <LegendDot className="border-2 border-ocean-600 ring-1 ring-sea-100" /> Cuối tuần
         </span>
         <span className="inline-flex items-center gap-2">
           <LegendDot className="bg-ocean-600" /> Ngày đang chọn

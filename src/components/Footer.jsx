@@ -1,6 +1,17 @@
 import { Link } from "react-router-dom";
+import { useSelector } from "react-redux";
 import Logo from "./Logo";
-import { company } from "../data/fake.data";
+
+const defaultCompany = {
+  brand: "20 TRAVEL",
+  hotline: "036 271 5585",
+  hotlineRaw: "0362715585",
+  facebook: "http://facebook.com/hoangthiendll",
+  facebookLabel: "facebook.com/hoangthiendll",
+  zalo: "https://zalo.me/0362715585",
+  zaloLabel: "zalo.me/0362715585",
+  workingHours: "08:00 – 21:00 (T2 – CN)",
+};
 
 const exploreLinks = [
   { label: "Khách sạn", to: "/dich-vu?category=hotel" },
@@ -21,16 +32,16 @@ const columns = [
   { title: "Về 20 TRAVEL", links: aboutLinks },
 ];
 
-const Legal = () => (
+const Legal = ({ company }) => (
   <div className="space-y-1 text-[10.5px] leading-relaxed text-white/45">
-    <p>© 2026 {company.brand}. Dữ liệu và thông tin liên hệ minh họa.</p>
+    <p>© 2026 {company.brand || "20 TRAVEL"}. Dữ liệu và thông tin liên hệ minh họa.</p>
     <p>Giá tham khảo có thể thay đổi theo ngày và tình trạng dịch vụ.</p>
   </div>
 );
 
-const ContactLinks = () => (
+const ContactLinks = ({ company }) => (
   <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[12px] text-white/70">
-    <a href={`tel:${company.hotlineRaw}`} className="group inline-flex items-center gap-2">
+    <a href={`tel:${company.hotlineRaw || "0362715585"}`} className="group inline-flex items-center gap-2">
       <span className="font-medium text-white/50">Hotline</span>
       <span className="font-semibold text-white">{company.hotline}</span>
     </a>
@@ -44,6 +55,9 @@ const ContactLinks = () => (
 );
 
 const Footer = ({ variant = "inner" }) => {
+  const content = useSelector((s) => s.content?.data);
+  const company = { ...defaultCompany, ...(content?.company || {}) };
+
   if (variant === "full") {
     return (
       <footer className="bg-ocean-950 text-white">
@@ -105,7 +119,7 @@ const Footer = ({ variant = "inner" }) => {
               <h3 className="text-[13px] font-semibold text-white">Kết nối</h3>
               <ul className="mt-4 space-y-3 text-[12px] text-white/55">
                 <li>
-                  <a href={`tel:${company.hotlineRaw}`} className="inline-flex items-center gap-2 transition hover:text-white">
+                  <a href={`tel:${company.hotlineRaw || "0362715585"}`} className="inline-flex items-center gap-2 transition hover:text-white">
                     <span className="text-white/35">Hotline</span>
                     <span className="text-white">{company.hotline}</span>
                   </a>
@@ -121,26 +135,27 @@ const Footer = ({ variant = "inner" }) => {
                   </a>
                 </li>
                 <li className="inline-flex items-center gap-2">
-                  <span className="text-white/35">+</span> 8:00–22:00 mỗi ngày
+                  <span className="text-white/35">+</span> {company.workingHours || "8:00–22:00 mỗi ngày"}
                 </li>
               </ul>
             </div>
           </div>
 
           <div className="mt-[106px]">
-            <Legal />
+            <Legal company={company} />
           </div>
         </div>
       </footer>
     );
   }
+
   return (
     <footer className="bg-ocean-950 text-white">
       {/* Mobile: footer gọn đúng Figma 390 (frame16 ≈180px) */}
       <div className="container-page pt-[26px] pb-[46px] md:hidden">
         <Logo light showTagline={false} />
         <p className="mt-[22px] flex flex-wrap items-center gap-x-1.5 text-[11.5px] text-white/60">
-          <a href={`tel:${company.hotlineRaw}`} className="font-medium text-white">
+          <a href={`tel:${company.hotlineRaw || "0362715585"}`} className="font-medium text-white">
             Hotline {company.hotline}
           </a>
           <span className="text-white/30">-</span>
@@ -164,12 +179,12 @@ const Footer = ({ variant = "inner" }) => {
             Tra cứu dễ dàng. Nghỉ dưỡng xứng đáng.
           </p>
           <div className="mt-6">
-            <Legal />
+            <Legal company={company} />
           </div>
         </div>
 
         <div className="md:max-w-[475px] md:text-left">
-          <ContactLinks />
+          <ContactLinks company={company} />
           <p className="mt-4 text-[10.5px] leading-relaxed text-white/45">
             Dữ liệu minh họa - Giá tham khảo, vui lòng liên hệ xác nhận.
           </p>

@@ -10,9 +10,7 @@ import {
   Calendar,
   Users,
   Check,
-  ArrowRight,
   ArrowLeft,
-  ShieldAlert,
 } from "lucide-react";
 import { services, november2026Calendar, consultants, company } from "../data/mockData";
 
@@ -29,22 +27,25 @@ const DetailPage = () => {
     day: selectedDay,
     type: "weekday",
     price: service.price,
+    display: "2.45tr",
   };
 
   const selectedConsultant =
-    consultants.find((c) => c.name === service.consultant) || consultants[0];
+    consultants.find((c) => c.name === service.consultant) ||
+    consultants.find((c) => c.id === "hoang-thien") ||
+    consultants[0];
 
   return (
     <div className="min-h-screen bg-[#f8fbfd] pb-24">
-      {/* 1. BREADCRUMBS & TOP TITLE */}
-      <div className="bg-white border-b border-slate-100 py-4">
+      {/* 1. TOP BREADCRUMB & HEADER */}
+      <div className="bg-white border-b border-slate-100 py-3.5 sm:py-4">
         <div className="container-page">
-          <div className="flex items-center justify-between text-xs text-slate-400 mb-2">
+          {/* Breadcrumb */}
+          <div className="flex items-center justify-between text-xs text-slate-400 mb-1.5">
             <div className="flex items-center gap-1.5">
-              <Link to="/home" className="hover:text-slate-600">
-                Trang chủ
+              <Link to="/home" className="hover:text-slate-600 hidden sm:inline">
+                Trang chủ /
               </Link>
-              <span>/</span>
               <Link to={`/tra-cuu?category=${service.category}`} className="hover:text-slate-600">
                 {service.categoryName}
               </Link>
@@ -53,14 +54,15 @@ const DetailPage = () => {
             </div>
             <Link
               to="/tra-cuu"
-              className="text-[#087eab] font-semibold flex items-center gap-1 hover:underline sm:hidden"
+              className="text-[#087eab] font-bold flex items-center gap-1 hover:underline text-xs"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
               <span>Quay lại</span>
             </Link>
           </div>
 
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
+          {/* Title & Rating */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
             <div>
               <h1 className="text-2xl sm:text-3xl font-black text-[#103d54]">
                 {service.name}
@@ -78,8 +80,8 @@ const DetailPage = () => {
             </div>
 
             {/* Rating badge */}
-            <div className="self-start sm:self-auto">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#e8f7f5] text-[#00877c] text-xs font-bold">
+            <div className="self-start sm:self-auto hidden sm:block">
+              <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#e8f7f5] text-[#00877c] text-xs font-bold">
                 <Star className="w-3.5 h-3.5 fill-[#00877c] text-[#00877c]" />
                 <span>{service.rating} • {service.tag}</span>
               </span>
@@ -89,17 +91,23 @@ const DetailPage = () => {
       </div>
 
       {/* 2. PHOTO GALLERY */}
-      <div className="container-page pt-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 rounded-2xl overflow-hidden h-72 sm:h-96 md:h-[420px]">
-          {/* Ảnh to bên trái */}
+      <div className="container-page pt-4 sm:pt-6">
+        <div className="relative rounded-2xl overflow-hidden h-64 sm:h-96 md:h-[420px] grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Main Image */}
           <div className="md:col-span-2 relative h-full">
             <img
               src={service.image}
               alt={service.name}
               className="w-full h-full object-cover"
             />
+            {/* Tag badge on image for mobile (matches chitiet&lichgia_mobile.png) */}
+            <span className="sm:hidden absolute top-3 left-3 px-3 py-1 rounded-full bg-white/95 backdrop-blur text-[11px] font-bold text-[#00877c] shadow-xs flex items-center gap-1">
+              <Star className="w-3 h-3 fill-[#00877c] text-[#00877c]" />
+              <span>{service.rating} • {service.tag}</span>
+            </span>
           </div>
-          {/* Ảnh nhỏ bên phải */}
+
+          {/* Secondary Image */}
           <div className="hidden md:block relative h-full">
             <img
               src={service.secondaryImage || "/images/ha-long.jpg"}
@@ -117,12 +125,11 @@ const DetailPage = () => {
       </div>
 
       {/* 3. TABS NAVIGATION */}
-      <div className="container-page pt-6">
-        <div className="border-b border-slate-200 flex items-center gap-8 text-sm font-bold">
+      <div className="container-page pt-4 sm:pt-6">
+        <div className="border-b border-slate-200 flex items-center gap-6 sm:gap-8 text-xs sm:text-sm font-bold">
           {[
             { id: "overview", label: "Tổng quan" },
             { id: "calendar", label: "Lịch giá" },
-            { id: "amenities", label: "Tiện ích" },
             { id: "policies", label: "Chính sách" },
           ].map((tab) => (
             <button
@@ -143,26 +150,26 @@ const DetailPage = () => {
         </div>
       </div>
 
-      {/* 4. MAIN CONTENT & STICKY SIDEBAR */}
-      <div className="container-page pt-8">
+      {/* 4. MAIN CONTENT & BOOKING SIDEBAR */}
+      <div className="container-page pt-6 sm:pt-8">
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-8">
           {/* CỘT TRÁI: CHI TIẾT & LỊCH GIÁ */}
-          <div className="space-y-8">
+          <div className="space-y-6 sm:space-y-8">
             {/* Giới thiệu */}
-            <div className="bg-white rounded-2xl p-6 sm:p-7 border border-slate-100 shadow-xs space-y-4">
+            <div className="bg-white rounded-2xl p-5 sm:p-7 border border-slate-100 shadow-xs space-y-3 sm:space-y-4">
               <h2 className="text-xl sm:text-2xl font-black text-[#103d54]">
                 {service.intro}
               </h2>
-              <p className="text-sm text-slate-600 leading-relaxed">
+              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
                 {service.description}
               </p>
 
               {/* Tiện ích chips */}
-              <div className="pt-2 flex flex-wrap gap-2.5">
+              <div className="pt-1 flex flex-wrap gap-2">
                 {service.amenitiesDetail.map((item) => (
                   <span
                     key={item}
-                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#f0f9fb] text-[#087eab] text-xs font-bold"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#f0f9fb] text-[#087eab] text-xs font-bold"
                   >
                     <Check className="w-3.5 h-3.5" />
                     <span>{item}</span>
@@ -172,19 +179,19 @@ const DetailPage = () => {
             </div>
 
             {/* TRA CỨU GIÁ THEO NGÀY (CALENDAR) */}
-            <div className="bg-white rounded-2xl p-6 sm:p-7 border border-slate-100 shadow-xs space-y-6">
+            <div className="bg-white rounded-2xl p-5 sm:p-7 border border-slate-100 shadow-xs space-y-5">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-4">
                 <div>
-                  <h3 className="text-lg font-black text-[#103d54]">
+                  <h3 className="text-base sm:text-lg font-black text-[#103d54]">
                     Tra cứu giá theo ngày
                   </h3>
                   <p className="text-xs text-slate-400 mt-0.5">
-                    Giá tham khảo cho 01 {service.roomType} • {service.guestStandard}
+                    Phòng Deluxe • 02 người lớn
                   </p>
                 </div>
 
                 {/* Chuyển tháng */}
-                <div className="flex items-center gap-3 self-start sm:self-auto">
+                <div className="flex items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0">
                   <button
                     type="button"
                     className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50"
@@ -217,14 +224,14 @@ const DetailPage = () => {
                 </div>
 
                 {/* Days matrix */}
-                <div className="grid grid-cols-7 gap-1.5 sm:gap-2 text-center">
+                <div className="grid grid-cols-7 gap-1 sm:gap-2 text-center">
                   {/* Empty offsets for day 1 (Sunday in Nov 2026 starts at col 7) */}
-                  <div className="p-2 sm:p-2.5 rounded-xl"></div>
-                  <div className="p-2 sm:p-2.5 rounded-xl"></div>
-                  <div className="p-2 sm:p-2.5 rounded-xl"></div>
-                  <div className="p-2 sm:p-2.5 rounded-xl"></div>
-                  <div className="p-2 sm:p-2.5 rounded-xl"></div>
-                  <div className="p-2 sm:p-2.5 rounded-xl"></div>
+                  <div className="p-1 sm:p-2.5 rounded-xl"></div>
+                  <div className="p-1 sm:p-2.5 rounded-xl"></div>
+                  <div className="p-1 sm:p-2.5 rounded-xl"></div>
+                  <div className="p-1 sm:p-2.5 rounded-xl"></div>
+                  <div className="p-1 sm:p-2.5 rounded-xl"></div>
+                  <div className="p-1 sm:p-2.5 rounded-xl"></div>
 
                   {november2026Calendar.map((item) => {
                     const isSelected = item.day === selectedDay;
@@ -248,7 +255,7 @@ const DetailPage = () => {
                         key={item.day}
                         type="button"
                         onClick={() => setSelectedDay(item.day)}
-                        className={`p-1.5 sm:p-2.5 rounded-xl text-center transition flex flex-col items-center justify-center min-h-[58px] sm:min-h-[64px] cursor-pointer ${bgClass}`}
+                        className={`p-1 sm:p-2.5 rounded-xl text-center transition flex flex-col items-center justify-center min-h-[54px] sm:min-h-[64px] cursor-pointer ${bgClass}`}
                       >
                         <span className="text-xs sm:text-sm font-bold leading-none mb-1">
                           {item.day}
@@ -261,26 +268,28 @@ const DetailPage = () => {
                   })}
                 </div>
 
-                {/* Chú thích màu */}
-                <div className="mt-6 pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500">
-                  <div className="flex items-center gap-4">
-                    <span className="flex items-center gap-1.5">
-                      <span className="w-2.5 h-2.5 rounded-full bg-slate-300"></span>
-                      <span>Ngày thường</span>
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <span className="w-2.5 h-2.5 rounded-full bg-[#00877c]"></span>
-                      <span>Cuối tuần</span>
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <span className="w-2.5 h-2.5 rounded-xs bg-[#087eab]"></span>
-                      <span>Đang chọn</span>
+                {/* Chú thích màu & ghi chú */}
+                <div className="mt-5 pt-4 border-t border-slate-100 space-y-2 text-xs text-slate-500">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-4">
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-full bg-slate-300"></span>
+                        <span>Ngày thường</span>
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-full bg-[#00877c]"></span>
+                        <span>Cuối tuần</span>
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-xs bg-[#087eab]"></span>
+                        <span>Đang chọn</span>
+                      </span>
+                    </div>
+
+                    <span className="text-[11px] text-slate-400">
+                      Giá / phòng / đêm • "tr" = triệu VNĐ
                     </span>
                   </div>
-
-                  <span className="text-[11px] text-slate-400">
-                    Giá / phòng / đêm • Đã gồm ăn sáng • Dữ liệu minh họa
-                  </span>
                 </div>
               </div>
             </div>
@@ -289,7 +298,7 @@ const DetailPage = () => {
           {/* CỘT PHẢI: BOOKING CARD & CONSULTANT */}
           <div className="space-y-5">
             {/* Card 1: Giá & Đặt chỗ */}
-            <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-xs space-y-4">
+            <div className="bg-white rounded-2xl p-5 sm:p-6 border border-slate-100 shadow-xs space-y-4">
               <div>
                 <span className="text-[10.5px] font-bold text-slate-400 uppercase tracking-wider block">
                   GIÁ NGÀY {selectedDay}/11/2026
@@ -298,12 +307,12 @@ const DetailPage = () => {
                   {new Intl.NumberFormat("vi-VN").format(dayData.price)}đ
                 </div>
                 <span className="text-xs text-slate-400 block mt-0.5">
-                  / {service.priceUnit} • {service.roomType}
+                  / phòng / đêm • Đã gồm ăn sáng
                 </span>
               </div>
 
-              {/* Form chọn ngày & khách */}
-              <div className="space-y-3 pt-2">
+              {/* Form chọn ngày & khách (Desktop) */}
+              <div className="hidden sm:block space-y-3 pt-2">
                 <div className="bg-[#f8fbfd] border border-slate-200 rounded-xl px-3.5 py-2.5 flex items-center justify-between">
                   <div>
                     <span className="text-[10px] text-slate-400 block font-semibold">
@@ -337,15 +346,42 @@ const DetailPage = () => {
                 Liên hệ tư vấn giá
               </button>
 
+              <p className="text-[11px] text-slate-400 text-center">
+                Vui lòng liên hệ xác nhận giá và tình trạng phòng.
+              </p>
+            </div>
+
+            {/* Card 2: Nhân viên tư vấn */}
+            <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-xs space-y-3">
+              <div className="flex items-center gap-3.5">
+                <img
+                  src={selectedConsultant.avatar}
+                  alt={selectedConsultant.name}
+                  className="w-14 h-14 rounded-2xl object-cover shrink-0"
+                />
+                <div className="space-y-0.5">
+                  <h4 className="text-sm font-black text-[#103d54]">
+                    {selectedConsultant.name}
+                  </h4>
+                  <span className="text-[11px] font-bold text-[#00877c] flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#00877c]"></span>
+                    Sẵn sàng hỗ trợ
+                  </span>
+                  <p className="text-[11px] text-slate-400">
+                    {selectedConsultant.specialty}
+                  </p>
+                </div>
+              </div>
+
               {/* Nút Chat Zalo & Hotline */}
-              <div className="grid grid-cols-2 gap-2.5 pt-1">
+              <div className="grid grid-cols-2 gap-2.5 pt-2">
                 <a
                   href={selectedConsultant.zalo}
                   target="_blank"
                   rel="noreferrer"
-                  className="py-2.5 px-3 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs text-center flex items-center justify-center gap-1.5 transition"
+                  className="py-2.5 px-3 rounded-xl bg-[#087eab] text-white font-bold text-xs text-center flex items-center justify-center gap-1.5 transition"
                 >
-                  <MessageCircle className="w-3.5 h-3.5 text-[#087eab]" />
+                  <MessageCircle className="w-3.5 h-3.5" />
                   <span>Chat Zalo</span>
                 </a>
                 <a
@@ -356,46 +392,10 @@ const DetailPage = () => {
                   <span>Gọi hotline</span>
                 </a>
               </div>
-
-              <p className="text-[11px] text-slate-400 text-center pt-1">
-                Giá có thể thay đổi. Vui lòng liên hệ để xác nhận.
-              </p>
-            </div>
-
-            {/* Card 2: Nhân viên tư vấn */}
-            <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-xs flex items-center gap-4">
-              <img
-                src={selectedConsultant.avatar}
-                alt={selectedConsultant.name}
-                className="w-14 h-14 rounded-2xl object-cover shrink-0"
-              />
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <h4 className="text-sm font-black text-[#103d54]">
-                    {selectedConsultant.name}
-                  </h4>
-                  <span className="text-[10px] font-bold text-[#00877c] flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#00877c]"></span>
-                    Sẵn sàng hỗ trợ
-                  </span>
-                </div>
-                <p className="text-xs text-slate-500 font-medium">
-                  {selectedConsultant.specialty}
-                </p>
-                <div className="text-[11px] text-[#087eab] font-bold flex items-center gap-2 pt-0.5">
-                  <a href={selectedConsultant.zalo} target="_blank" rel="noreferrer">
-                    Zalo
-                  </a>
-                  <span>•</span>
-                  <span>Facebook</span>
-                  <span>•</span>
-                  <span>036 271 5585</span>
-                </div>
-              </div>
             </div>
 
             {/* Card 3: Lưu ý trước chuyến đi */}
-            <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-xs space-y-3">
+            <div className="bg-white rounded-2xl p-5 sm:p-6 border border-slate-100 shadow-xs space-y-3">
               <h4 className="text-sm font-black text-[#103d54]">
                 Lưu ý trước chuyến đi
               </h4>
@@ -414,4 +414,3 @@ const DetailPage = () => {
 };
 
 export default DetailPage;
-

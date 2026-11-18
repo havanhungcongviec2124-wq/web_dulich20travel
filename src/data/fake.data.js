@@ -1,4 +1,4 @@
-import { IMG } from "./images";
+import { IMG } from "./images.js";
 
 /* ------------------------------------------------------------------
    Dữ liệu mô phỏng (fake data) lấy từ bảng giá Excel của STK TRAVEL

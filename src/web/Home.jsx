@@ -1,20 +1,69 @@
+import { useMemo } from "react";
 import { Link } from "react-router-dom";
+import { useSelector } from "react-redux";
 import { ArrowRight, Phone, Check } from "lucide-react";
 import SearchPanel from "../components/SearchPanel";
 import ServiceCard from "../components/ServiceCard";
 import { CategoryIcon } from "../lib/icons";
-import { categories, services, consultants, company } from "../data/fake.data";
 import { IMG } from "../data/images";
 
-const featured = ["vinpearl-hl", "ambassador", "sunworld-hl"]
-  .map((id) => services.find((s) => s.id === id))
-  .filter(Boolean);
+const defaultCompany = {
+  hotline: "036 271 5585",
+  hotlineRaw: "0362715585",
+};
 
-const homeCategories = categories.filter((c) => c.id !== "tour");
-const counts = { hotel: 128, "cruise-day": 36, "cruise-night": 42, ticket: 64, transport: 58 };
-const homeConsultant = consultants.find((c) => c.id === "hoang-thien") || consultants[0];
+const pickFeatured = (services) => {
+  const preferredSlugs = ["vinpearl-resort-spa-ha-long", "ambassador-cruise-day", "sun-world-ha-long", "vinpearl-hl", "ambassador", "sunworld-hl"];
+  const picked = [];
+  for (const slug of preferredSlugs) {
+    const found = services.find((s) => s.slug === slug || s.id === slug || s.code === slug);
+    if (found && !picked.some((p) => p._id === found._id || p.slug === found.slug)) picked.push(found);
+    if (picked.length === 3) break;
+  }
+  if (picked.length < 3) {
+    for (const s of services) {
+      if (s.featured && !picked.some((p) => p._id === s._id || p.slug === s.slug)) picked.push(s);
+      if (picked.length === 3) break;
+    }
+  }
+  if (picked.length < 3) {
+    for (const s of services) {
+      if (!picked.some((p) => p._id === s._id || p.slug === s.slug)) picked.push(s);
+      if (picked.length === 3) break;
+    }
+  }
+  return picked.slice(0, 3);
+};
 
 const Home = () => {
+  const categories = useSelector((s) => s.catalog?.categories || []);
+  const services = useSelector((s) => s.catalog?.services || []);
+  const consultants = useSelector((s) => s.consultants?.items || []);
+  const content = useSelector((s) => s.content?.data);
+
+  const company = { ...defaultCompany, ...(content?.company || {}) };
+  const homeCategories = useMemo(
+    () => categories.filter((c) => c.status !== "Ẩn" && c.key !== "tour" && c.id !== "tour"),
+    [categories]
+  );
+  const featured = useMemo(() => pickFeatured(services), [services]);
+  const homeConsultant = useMemo(() => {
+    return (
+      consultants.find((c) => c.key === "hoang-thien" || c.id === "hoang-thien") ||
+      consultants.find((c) => c.active !== false && c.status !== "Tạm ẩn") ||
+      consultants[0] ||
+      {
+        name: "Hoàng Thiện",
+        role: "Chuyên viên tư vấn du lịch",
+        status: "Sẵn sàng tư vấn",
+        tagline: "Luôn lắng nghe để gợi ý hành trình phù hợp nhất.",
+        image: IMG.figmaConsultant,
+        zalo: company.zalo || "https://zalo.me/0362715585",
+        facebook: company.facebook || "http://facebook.com/hoangthiendll",
+      }
+    );
+  }, [consultants, company]);
+
   return (
     <main>
       {/* HERO */}
@@ -72,27 +121,30 @@ const Home = () => {
           </h2>
 
           <div className="mt-5 grid grid-cols-3 gap-x-2.5 gap-y-3 pb-[38px] lg:mt-[88px] lg:grid-cols-5 lg:gap-[19px] lg:pb-8">
-            {homeCategories.map((category) => (
-              <Link
-                key={category.id}
-                to={`/dich-vu?category=${category.id}`}
-                className="group flex h-[100px] flex-col items-start justify-center gap-2 rounded-xl bg-ocean-50 px-4 transition hover:bg-ocean-100/70 lg:h-[96px] lg:flex-row lg:items-center lg:gap-4 lg:px-6"
-              >
-                <CategoryIcon
-                  name={category.icon}
-                  className="h-6 w-6 shrink-0 text-ocean-700 transition group-hover:text-ocean-600 lg:h-7 lg:w-7"
-                  strokeWidth={1.6}
-                />
-                <span className="min-w-0">
-                  <span className="block text-[12.5px] leading-tight font-semibold text-ocean-950 lg:text-[13px]">
-                    {category.name}
+            {homeCategories.map((category) => {
+              const key = category.key || category.id;
+              return (
+                <Link
+                  key={key}
+                  to={`/dich-vu?category=${key}`}
+                  className="group flex h-[100px] flex-col items-start justify-center gap-2 rounded-xl bg-ocean-50 px-4 transition hover:bg-ocean-100/70 lg:h-[96px] lg:flex-row lg:items-center lg:gap-4 lg:px-6"
+                >
+                  <CategoryIcon
+                    name={category.icon}
+                    className="h-6 w-6 shrink-0 text-ocean-700 transition group-hover:text-ocean-600 lg:h-7 lg:w-7"
+                    strokeWidth={1.6}
+                  />
+                  <span className="min-w-0">
+                    <span className="block text-[12.5px] leading-tight font-semibold text-ocean-950 lg:text-[13px]">
+                      {category.name}
+                    </span>
+                    <span className="mt-1 block text-[10px] text-ink-500 lg:text-[10.5px]">
+                      {category.count ?? 0} {category.unit || "dịch vụ"}
+                    </span>
                   </span>
-                  <span className="mt-1 block text-[10px] text-ink-500 lg:text-[10.5px]">
-                    {counts[category.id] ?? category.count} {category.unit}
-                  </span>
-                </span>
-              </Link>
-            ))}
+                </Link>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -125,7 +177,11 @@ const Home = () => {
 
           <div className="mt-[22px] grid gap-[18px] lg:mt-[27px] lg:grid-cols-3 lg:gap-6">
             {featured.map((service) => (
-              <ServiceCard key={service.id} service={service} displayPrice={service.price} />
+              <ServiceCard
+                key={service._id || service.slug || service.id}
+                service={service}
+                displayPrice={service.price}
+              />
             ))}
           </div>
         </div>
@@ -145,7 +201,7 @@ const Home = () => {
 
               <div className="mt-[21px] flex items-start gap-6 lg:mt-[27px] lg:gap-[28px]">
                 <img
-                  src={homeConsultant.image || IMG.figmaConsultant}
+                  src={company.consultantAvatar || homeConsultant.image || homeConsultant.avatar || IMG.figmaConsultant}
                   alt={homeConsultant.name}
                   className="h-[90px] w-[74px] shrink-0 rounded-2xl object-cover lg:h-[220px] lg:w-[192px]"
                 />
@@ -156,18 +212,18 @@ const Home = () => {
                   </h3>
                   <span className="mt-3 inline-flex h-[30px] items-center gap-1.5 rounded-lg bg-sea-50 px-3 text-[10.5px] font-medium text-ocean-700">
                     <span className="h-1.5 w-1.5 rounded-full bg-sea-600" />
-                    {homeConsultant.status}
+                    {homeConsultant.status || "Sẵn sàng tư vấn"}
                   </span>
                   <p className="mt-[41px] text-[12px] font-medium text-ocean-900 lg:mt-[21px] lg:text-[13px]">
                     {homeConsultant.role}
                   </p>
                   <p className="mt-1.5 hidden text-[11.5px] text-ink-500 lg:block lg:text-[12px]">
-                    {homeConsultant.tagline}
+                    {homeConsultant.tagline || homeConsultant.specialty || ""}
                   </p>
 
                   <div className="mt-[20px] hidden flex-wrap gap-3 lg:flex">
                     <a
-                      href={homeConsultant.zalo}
+                      href={company.zalo || homeConsultant.zalo}
                       target="_blank"
                       rel="noreferrer"
                       className="inline-flex h-12 w-[142px] items-center justify-center rounded-xl bg-ocean-600 text-[12.5px] font-semibold text-white transition hover:bg-ocean-700"
@@ -175,7 +231,7 @@ const Home = () => {
                       Chat Zalo
                     </a>
                     <a
-                      href={homeConsultant.facebook}
+                      href={company.facebook || homeConsultant.facebook}
                       target="_blank"
                       rel="noreferrer"
                       className="inline-flex h-[47px] w-[141px] items-center justify-center rounded-xl bg-white text-[12.5px] font-semibold text-ocean-900 ring-1 ring-ocean-100 transition hover:bg-ocean-50"
@@ -188,7 +244,7 @@ const Home = () => {
 
               <div className="mt-[29px] grid grid-cols-2 gap-[18px] lg:hidden">
                 <a
-                  href={homeConsultant.zalo}
+                  href={company.zalo || homeConsultant.zalo}
                   target="_blank"
                   rel="noreferrer"
                   className="flex h-12 items-center justify-center rounded-xl bg-ocean-600 text-[12.5px] font-semibold text-white transition hover:bg-ocean-700"
@@ -196,7 +252,7 @@ const Home = () => {
                   Chat Zalo
                 </a>
                 <a
-                  href={homeConsultant.facebook}
+                  href={company.facebook || homeConsultant.facebook}
                   target="_blank"
                   rel="noreferrer"
                   className="flex h-12 items-center justify-center rounded-xl bg-white text-[12.5px] font-semibold text-ocean-900 ring-1 ring-ocean-100 transition hover:bg-ocean-50"
@@ -206,7 +262,7 @@ const Home = () => {
               </div>
 
               <a
-                href={`tel:${company.hotlineRaw}`}
+                href={`tel:${company.hotlineRaw || "0362715585"}`}
                 className="mt-[29px] inline-flex items-center gap-2 text-[11.5px] font-medium text-ink-600 lg:hidden"
               >
                 <Phone className="h-3.5 w-3.5 text-sea-600" /> Hotline {company.hotline}
@@ -224,7 +280,7 @@ const Home = () => {
                 Hỗ trợ miễn phí – Mỗi ngày 8:00–22:00
               </p>
               <a
-                href={`tel:${company.hotlineRaw}`}
+                href={`tel:${company.hotlineRaw || "0362715585"}`}
                 className="mt-[18px] inline-flex items-center gap-3 text-[26px] font-bold tracking-tight text-ocean-950"
               >
                 <Phone className="h-5 w-5 text-sea-600" />

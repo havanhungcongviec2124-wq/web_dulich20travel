@@ -1,16 +1,14 @@
 import { useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { ChevronDown, ChevronLeft, ChevronRight, RotateCcw, SlidersHorizontal, X } from "lucide-react";
+import { useSelector } from "react-redux";
+import { ChevronDown, ChevronLeft, ChevronRight, RotateCcw, Search as SearchIcon, SlidersHorizontal, X } from "lucide-react";
 import SearchPanel from "../components/SearchPanel";
 import { ServiceRow } from "../components/ServiceCard";
-import { categories, locations } from "../data/fake.data";
 import { filterServices, sortOptions } from "../lib/catalog";
 import { formatCurrency, formatDate, cn } from "../lib/format";
-import { getPriceForDate } from "../lib/pricing";
 
 const PAGE_SIZE = 6;
 const MAX_PRICE = 6000000;
-const marketingCounts = { hotel: 128, "cruise-day": 36, "cruise-night": 42, ticket: 64, transport: 58, tour: 12 };
 const amenityOptions = [
   { id: "pool", label: "Bể bơi", match: ["bể bơi", "hồ bơi"] },
   { id: "breakfast", label: "Bao gồm ăn sáng", match: ["ăn sáng", "buffet sáng"] },
@@ -39,9 +37,14 @@ const FilterCheck = ({ checked, onChange, label, count }) => (
 
 const Search = () => {
   const [params, setParams] = useSearchParams();
+  const categories = useSelector((s) => s.catalog?.categories || []);
+  const locations = useSelector((s) => s.catalog?.locations || []);
+  const services = useSelector((s) => s.catalog?.services || []);
+
   const location = params.get("location") || "";
   const date = params.get("date") || "";
   const category = params.get("category") || "";
+  const q = params.get("q") || "";
   const sort = params.get("sort") || "featured";
   const page = Math.max(1, Number(params.get("page") || 1));
   const [maxPrice, setMaxPrice] = useState(Number(params.get("maxPrice") || MAX_PRICE));
@@ -51,27 +54,35 @@ const Search = () => {
   const activeDate = date ? new Date(`${date}T00:00:00`) : new Date();
   const priceParam = `${minPrice}-${Math.max(minPrice + 100000, maxPrice)}`;
 
+  const catName = (key) => {
+    if (key === "cruise") return "Du thuyền";
+    return categories.find((c) => c.key === key || c.id === key)?.name || key;
+  };
+
+  const filterCats = useMemo(() => {
+    const allowed = ["hotel", "cruise-day", "cruise-night", "ticket", "transport"];
+    return allowed
+      .map((id) => categories.find((c) => c.key === id || c.id === id) || { key: id, id, name: catName(id), count: 0 })
+      .filter(Boolean);
+  }, [categories]);
+
   const results = useMemo(() => {
     const nextParams = new URLSearchParams(params);
     nextParams.set("price", priceParam);
-    const base = filterServices(nextParams, activeDate);
+    nextParams.set("sort", sort);
+    const base = filterServices(nextParams, activeDate, services);
     const filtered = base.filter(({ service }) => {
       if (!amenities.length) return true;
-      const tags = (service.tags || []).join(" ").toLowerCase();
+      const tags = [ ...(service.tags || []), ...(service.amenities || []).map((a) => (typeof a === "string" ? a : a.label)) ]
+        .join(" ")
+        .toLower();
       return amenities.every((id) => {
         const option = amenityOptions.find((a) => a.id === id);
         return option ? option.match.some((keyword) => tags.includes(keyword)) : true;
       });
     });
-    const sorted = [...filtered];
-    if (sort === "price-asc") sorted.sort((a, b) => a.quote - b.quote);
-    if (sort === "price-desc") sorted.sort((a, b) => b.quote - a.quote);
-    if (sort === "rating") sorted.sort((a, b) => b.service.rating - a.service.rating);
-    if (sort === "featured") {
-      sorted.sort((a, b) => Number(b.service.featured) - Number(a.service.featured) || a.quote - b.quote);
-    }
-    return sorted;
-  }, [params, activeDate, priceParam, amenities, sort]);
+    return filtered;
+  }, [params, activeDate, priceParam, amenities, sort, services]);
 
   const pages = Math.max(1, Math.ceil(results.length / PAGE_SIZE));
   const visible = results.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -81,7 +92,7 @@ const Search = () => {
     const next = new URLSearchParams(params);
     if (value) next.set(key, value);
     else next.delete(key);
-    next.delete("page");
+    if (key !== "page") next.delete("page");
     setParams(next);
   };
 
@@ -115,9 +126,10 @@ const Search = () => {
   if (locationName) chips.push({ key: "location", label: locationName, clear: () => updateParam("location", "") });
   if (date) chips.push({ key: "date", label: formatDate(date), clear: () => updateParam("date", "") });
   if (category) {
-    const label = category === "cruise" ? "Du thuyền" : categories.find((c) => c.id === category)?.name;
+    const label = catName(category);
     if (label) chips.push({ key: "category", label, clear: () => updateParam("category", "") });
   }
+  if (q) chips.push({ key: "q", label: `Từ khóa: ${q}`, clear: () => updateParam("q", "") });
 
   const sliderLeft = (minPrice / MAX_PRICE) * 100;
   const sliderRight = (maxPrice / MAX_PRICE) * 100;
@@ -142,6 +154,20 @@ const Search = () => {
             initial={{ location, date, category }}
             className="mt-5 lg:mt-[19px]"
           />
+
+          <div className="mt-4">
+            <label className="relative block">
+              <span className="sr-only">Tìm theo mã hoặc tên dịch vụ</span>
+              <SearchIcon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400" />
+              <input
+                type="text"
+                value={q}
+                onChange={(e) => updateParam("q", e.target.value)}
+                placeholder="Tìm theo mã hoặc tên dịch vụ..."
+                className="h-[47px] w-full rounded-xl border border-ocean-100 bg-white pl-11 pr-4 text-[13px] font-medium text-ocean-950 outline-none placeholder:text-ink-400 focus:border-ocean-300"
+              />
+            </label>
+          </div>
         </div>
       </section>
 
@@ -165,13 +191,13 @@ const Search = () => {
               <div className="mt-8">
                 <p className="text-[10px] font-semibold tracking-[0.16em] text-ink-500 uppercase">Loại dịch vụ</p>
                 <div className="mt-4 space-y-[18px]">
-                  {["hotel", "cruise-day", "cruise-night", "ticket", "transport"].map((id) => {
-                    const cat = categories.find((c) => c.id === id);
+                  {filterCats.map((cat) => {
+                    const id = cat.key || cat.id;
                     return (
                       <FilterCheck
                         key={id}
-                        label={cat?.name}
-                        count={marketingCounts[id]}
+                        label={cat.name}
+                        count={cat.count}
                         checked={category === id}
                         onChange={() => updateParam("category", category === id ? "" : id)}
                       />
@@ -306,7 +332,7 @@ const Search = () => {
 
             <div className="mt-6 space-y-[22px]">
               {visible.map(({ service, quote }) => (
-                <ServiceRow key={service.id} service={service} displayPrice={quote} />
+                <ServiceRow key={service._id || service.id || service.slug} service={service} displayPrice={quote} />
               ))}
               {visible.length === 0 && (
                 <div className="rounded-xl bg-white p-10 text-center">

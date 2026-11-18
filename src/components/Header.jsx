@@ -1,15 +1,39 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
+import { useSelector } from "react-redux";
 import { Menu, Phone, X, MessageCircle } from "lucide-react";
 import Logo from "./Logo";
-import { company, navLinks, categories } from "../data/fake.data";
 import { cn } from "../lib/format";
+
+const defaultCompany = {
+  hotline: "036 271 5585",
+  hotlineRaw: "0362715585",
+  facebook: "http://facebook.com/hoangthiendll",
+  zalo: "https://zalo.me/0362715585",
+};
+
+const defaultNavLinks = [
+  { label: "Trang chủ", to: "/home" },
+  { label: "Khách sạn", to: "/dich-vu?category=hotel" },
+  { label: "Du thuyền", to: "/dich-vu?category=cruise" },
+  { label: "Vé vui chơi", to: "/dich-vu?category=ticket" },
+  { label: "Xe & dịch vụ", to: "/dich-vu?category=transport" },
+];
 
 const Header = () => {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
   const menuRef = useRef(null);
+  const content = useSelector((s) => s.content?.data);
+  const categories = useSelector((s) => s.catalog?.categories || []);
+
+  const company = { ...defaultCompany, ...(content?.company || {}) };
+  const navLinks = content?.info?.navLinks?.length ? content.info.navLinks : defaultNavLinks;
+  const menuCategories = useMemo(
+    () => categories.filter((c) => c.status !== "Ẩn" && c.key !== "tour").slice(0, 5),
+    [categories]
+  );
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 6);
@@ -115,8 +139,12 @@ const Header = () => {
             </a>
           </div>
           <div className="flex flex-wrap gap-1.5 pt-3">
-            {categories.map((category) => (
-              <Link key={category.id} to={`/dich-vu?category=${category.id}`} className="chip">
+            {menuCategories.map((category) => (
+              <Link
+                key={category.key || category.id}
+                to={`/dich-vu?category=${category.key || category.id}`}
+                className="chip"
+              >
                 {category.name}
               </Link>
             ))}

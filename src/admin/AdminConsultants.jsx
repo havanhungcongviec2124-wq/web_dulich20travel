@@ -1,287 +1,355 @@
-import { useState } from "react";
-import { Search, Plus, Upload, Trash2 } from "lucide-react";
-import { consultants as initialConsultants } from "../data/mockData";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { Plus, Search } from "lucide-react";
+import {
+  fetchConsultants,
+  createConsultant,
+  updateConsultant,
+  deleteConsultant,
+} from "../redux/slices/consultantSlice";
+
+const PAGE_SIZE = 6;
+
+const statusOf = (c) => (c?.status === "Hoạt động" || c?.active ? "Hoạt động" : "Tạm ẩn");
+
+const blankConsultant = () => ({
+  name: "Nhân viên mới",
+  role: "Khách sạn",
+  specialty: "Tư vấn dịch vụ du lịch",
+  phone: "0900 000 000",
+  zalo: "https://zalo.me/0362715585",
+  facebook: "facebook.com/hoangthiendll",
+  status: "Hoạt động",
+  active: true,
+  avatar: "/images/figma-consultant.jpg",
+});
 
 const AdminConsultants = () => {
-  const [consultantList, setConsultantList] = useState(initialConsultants);
-  const [selectedConsultant, setSelectedConsultant] = useState(initialConsultants[0]);
-  const [searchQuery, setSearchQuery] = useState("");
+  const dispatch = useDispatch();
+  const items = useSelector((s) => s.consultants?.items || []);
+  const [selectedId, setSelectedId] = useState(null);
+  const [draft, setDraft] = useState(null);
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [saving, setSaving] = useState(false);
+  const fileRef = useRef(null);
 
-  const filteredConsultants = consultantList.filter(
-    (c) =>
-      c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.phone.includes(searchQuery)
+  useEffect(() => {
+    dispatch(fetchConsultants());
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (!items.length) {
+      setSelectedId(null);
+      setDraft(null);
+      return;
+    }
+    const current = items.find((c) => c._id === selectedId) || items[0];
+    if (!selectedId || !items.some((c) => c._id === selectedId)) {
+      setSelectedId(current._id);
+      setDraft({ ...current });
+    }
+  }, [items, selectedId]);
+
+  const stats = useMemo(
+    () => ({
+      total: items.length,
+      active: items.filter((c) => statusOf(c) === "Hoạt động").length,
+      hidden: items.filter((c) => statusOf(c) !== "Hoạt động").length,
+    }),
+    [items]
   );
 
-  const handleSave = () => {
-    setConsultantList((prev) =>
-      prev.map((c) => (c.id === selectedConsultant.id ? selectedConsultant : c))
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return items;
+    return items.filter((c) =>
+      [c.name, c.role, c.phone, c.specialty, c.status].some((v) => String(v || "").toLowerCase().includes(q))
     );
-    alert("Đã lưu thông tin nhân viên!");
+  }, [items, search]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
+
+  const selectConsultant = (c) => {
+    setSelectedId(c._id);
+    setDraft({ ...c });
   };
 
-  const handleDelete = () => {
-    if (confirm("Bạn có chắc chắn muốn xóa nhân viên này?")) {
-      const nextList = consultantList.filter((c) => c.id !== selectedConsultant.id);
-      setConsultantList(nextList);
-      if (nextList.length > 0) setSelectedConsultant(nextList[0]);
+  const handleDraftChange = (field, value) => {
+    setDraft((d) => ({ ...d, [field]: value }));
+  };
+
+  const handleSave = async () => {
+    if (!draft) return;
+    try {
+      setSaving(true);
+      const payload = {
+        ...draft,
+        active: statusOf(draft) === "Hoạt động",
+      };
+      if (draft._id) {
+        await dispatch(updateConsultant({ id: draft._id, data: payload })).unwrap();
+      } else {
+        const created = await dispatch(createConsultant(payload)).unwrap();
+        if (created?._id) {
+          setSelectedId(created._id);
+          setDraft({ ...created });
+        }
+      }
+      await dispatch(fetchConsultants());
+    } catch (err) {
+      alert(err || "Không thể lưu nhân viên tư vấn.");
+    } finally {
+      setSaving(false);
     }
   };
 
+  const handleAdd = async () => {
+    try {
+      setSaving(true);
+      const created = await dispatch(createConsultant(blankConsultant())).unwrap();
+      await dispatch(fetchConsultants());
+      if (created?._id) {
+        setSelectedId(created._id);
+        setDraft({ ...created });
+      }
+      setPage(1);
+      setSearch("");
+    } catch (err) {
+      alert(err || "Không thể thêm nhân viên.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!draft?._id) return;
+    if (!window.confirm("Bạn có chắc muốn xóa nhân viên tư vấn này?")) return;
+    try {
+      setSaving(true);
+      await dispatch(deleteConsultant(draft._id)).unwrap();
+      await dispatch(fetchConsultants());
+      setDraft(null);
+      setSelectedId(null);
+    } catch (err) {
+      alert(err || "Không thể xóa nhân viên.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleAvatarUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setDraft((d) => ({ ...d, avatar: String(reader.result || d?.avatar || "") }));
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
+
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
-      {/* 1. HEADER */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-black text-[#103d54]">
-            Nhân viên tư vấn
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-400 mt-1">
-            Quản lý thông tin liên hệ và người đồng hành cùng khách hàng.
-          </p>
+          <h1 className="text-[22px] leading-tight font-extrabold text-[#023648]">Nhân viên tư vấn</h1>
+          <p className="mt-1 text-[12px] text-slate-400">Quản lý danh sách và thông tin người phụ trách tư vấn khách hàng.</p>
         </div>
+        <button
+          type="button"
+          onClick={handleAdd}
+          disabled={saving}
+          className="inline-flex items-center gap-2 rounded-md bg-[#00749d] px-4 py-2 text-[12px] font-semibold text-white transition hover:bg-[#006688] disabled:opacity-60"
+        >
+          <Plus className="h-4 w-4" /> Thêm nhân viên
+        </button>
+      </div>
 
-        <div>
-          <button
-            type="button"
-            onClick={() => {
-              const newConsultant = {
-                id: `nv${Date.now()}`,
-                name: "Nhân viên mới",
-                role: "Khách sạn",
-                specialty: "Tư vấn tour & khách sạn",
-                phone: "0900 000 000",
-                zalo: "https://zalo.me",
-                facebook: "facebook.com/20travel",
-                status: "Hoạt động",
-                avatar: "/images/figma-consultant.jpg",
-              };
-              setConsultantList([newConsultant, ...consultantList]);
-              setSelectedConsultant(newConsultant);
-            }}
-            className="px-4 py-2.5 rounded-xl bg-[#087eab] hover:bg-[#0a6b90] text-white text-xs font-bold tracking-wide transition shadow-xs flex items-center gap-1.5"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Thêm nhân viên</span>
-          </button>
+      <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="rounded-xl border border-[#e6eef2] bg-white p-4">
+          <p className="text-[10px] font-semibold tracking-[0.08em] text-slate-400 uppercase">Tổng nhân viên</p>
+          <p className="mt-2 text-[26px] font-extrabold text-[#023648]">{stats.total}</p>
+        </div>
+        <div className="rounded-xl border border-[#e6eef2] bg-white p-4">
+          <p className="text-[10px] font-semibold tracking-[0.08em] text-slate-400 uppercase">Đang hoạt động</p>
+          <p className="mt-2 text-[26px] font-extrabold text-[#008478]">{stats.active}</p>
+        </div>
+        <div className="rounded-xl border border-[#e6eef2] bg-white p-4">
+          <p className="text-[10px] font-semibold tracking-[0.08em] text-slate-400 uppercase">Tạm ẩn</p>
+          <p className="mt-2 text-[26px] font-extrabold text-slate-500">{stats.hidden}</p>
         </div>
       </div>
 
-      {/* 2. STAT CARDS */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-xs space-y-1">
-          <span className="text-xs font-semibold text-slate-500">Tổng nhân viên</span>
-          <div className="text-3xl font-black text-[#103d54]">
-            {consultantList.length}
+      <div className="mt-5 grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="rounded-xl border border-[#e6eef2] bg-white p-4 sm:p-5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <h2 className="text-[14px] font-extrabold text-[#023648]">Danh sách tư vấn viên</h2>
+            <div className="relative w-full sm:w-[280px]">
+              <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <input
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                placeholder="Tìm theo tên, vai trò, SĐT..."
+                className="h-10 w-full rounded-lg border border-[#e6eef2] pr-3 pl-9 text-[12px] text-[#31434e] outline-none focus:border-[#00749d]"
+              />
+            </div>
           </div>
-        </div>
 
-        <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-xs space-y-1">
-          <span className="text-xs font-semibold text-slate-500">Đang hoạt động</span>
-          <div className="text-3xl font-black text-[#00877c]">
-            {consultantList.filter((c) => c.status === "Hoạt động").length}
-          </div>
-        </div>
-
-        <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-xs space-y-1">
-          <span className="text-xs font-semibold text-slate-500">Tạm ẩn</span>
-          <div className="text-3xl font-black text-slate-400">
-            {consultantList.filter((c) => c.status !== "Hoạt động").length}
-          </div>
-        </div>
-      </div>
-
-      {/* 3. SEARCH BAR */}
-      <div className="bg-white rounded-2xl p-3 border border-slate-100 shadow-xs relative max-w-lg">
-        <Search className="w-4 h-4 text-slate-400 absolute left-4 top-3.5" />
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Tìm tên hoặc số điện thoại..."
-          className="w-full pl-10 pr-4 py-1 text-xs font-medium text-slate-800 focus:outline-none"
-        />
-      </div>
-
-      {/* 4. MAIN CONTENT: TABLE & EDIT FORM */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-6">
-        {/* Cột trái: Bảng nhân viên */}
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-xs overflow-hidden h-fit">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full min-w-[560px] text-left text-[12px]">
               <thead>
-                <tr className="text-slate-400 border-b border-slate-100 bg-slate-50/50">
-                  <th className="py-3.5 px-5 font-semibold">Nhân viên</th>
-                  <th className="py-3.5 px-4 font-semibold">Phụ trách</th>
-                  <th className="py-3.5 px-4 font-semibold">Trạng thái</th>
-                  <th className="py-3.5 px-5 font-semibold text-right">Thao tác</th>
+                <tr className="border-b border-[#edf3f5] text-[10.5px] font-semibold text-slate-400">
+                  <th className="py-2.5 pr-3 font-semibold">Nhân viên</th>
+                  <th className="py-2.5 pr-3 font-semibold">Vai trò</th>
+                  <th className="py-2.5 pr-3 font-semibold">Liên hệ</th>
+                  <th className="py-2.5 pr-3 font-semibold">Trạng thái</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filteredConsultants.map((c) => (
-                  <tr
-                    key={c.id}
-                    onClick={() => setSelectedConsultant(c)}
-                    className={`cursor-pointer transition ${
-                      selectedConsultant?.id === c.id ? "bg-[#f0f9fb]" : "hover:bg-slate-50/60"
-                    }`}
-                  >
-                    <td className="py-3.5 px-5 font-bold text-slate-800">{c.name}</td>
-                    <td className="py-3.5 px-4 text-slate-600">{c.role}</td>
-                    <td className="py-3.5 px-4">
-                      {c.status === "Hoạt động" ? (
-                        <span className="inline-flex items-center gap-1.5 text-[#00877c] font-bold">
-                          <span className="w-1.5 h-1.5 rounded-full bg-[#00877c]"></span>
-                          <span>Hoạt động</span>
+              <tbody>
+                {pageItems.map((c) => {
+                  const active = c._id === selectedId;
+                  return (
+                    <tr
+                      key={c._id}
+                      onClick={() => selectConsultant(c)}
+                      className={`cursor-pointer border-b border-[#f4f8fa] last:border-0 ${active ? "bg-[#f0f9fb]" : "hover:bg-[#fafcfd]"}`}
+                    >
+                      <td className="py-3 pr-3">
+                        <div className="flex items-center gap-3">
+                          <img src={c.avatar || c.image || "/images/figma-consultant.jpg"} alt={c.name} className="h-9 w-9 rounded-full object-cover" />
+                          <div>
+                            <p className="font-semibold text-[#023648]">{c.name}</p>
+                            <p className="text-[10.5px] text-slate-400">{c.specialty || "—"}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3 pr-3 text-slate-600">{c.role || "—"}</td>
+                      <td className="py-3 pr-3 text-slate-600">{c.phone || "—"}</td>
+                      <td className="py-3 pr-3">
+                        <span className={`inline-flex rounded-md px-2.5 py-0.5 text-[10.5px] font-semibold ${statusOf(c) === "Hoạt động" ? "bg-[#e5f5f6] text-[#008478]" : "bg-slate-100 text-slate-500"}`}>
+                          {statusOf(c)}
                         </span>
-                      ) : (
-                        <span className="text-slate-400 font-medium">Tạm ẩn</span>
-                      )}
-                    </td>
-                    <td className="py-3.5 px-5 text-right">
-                      <span className="text-slate-500 font-bold hover:text-[#087eab]">
-                        Sửa •••
-                      </span>
-                    </td>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {pageItems.length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="py-8 text-center text-[12px] text-slate-400">Không tìm thấy nhân viên phù hợp.</td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>
 
-          <div className="p-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-            <span>Hiển thị 1–{filteredConsultants.length} trên {consultantList.length} nhân viên</span>
-            <div className="flex items-center gap-1">
-              <button className="px-2 py-1 rounded border border-slate-200">←</button>
-              <button className="px-2 py-1 rounded bg-[#087eab] text-white font-bold">1</button>
-              <button className="px-2 py-1 rounded border border-slate-200">2</button>
-              <button className="px-2 py-1 rounded border border-slate-200">→</button>
+          {totalPages > 1 && (
+            <div className="mt-4 flex items-center justify-end gap-2">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => setPage(n)}
+                  className={`h-8 min-w-8 rounded-md px-2 text-[11px] font-semibold ${page === n ? "bg-[#00749d] text-white" : "border border-[#e6eef2] text-[#31434e] hover:bg-[#f7fbfc]"}`}
+                >
+                  {n}
+                </button>
+              ))}
             </div>
-          </div>
+          )}
         </div>
 
-        {/* Cột phải: Form chỉnh sửa nhân viên */}
-        {selectedConsultant && (
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-xs p-6 space-y-4 h-fit">
-            <h3 className="text-sm font-bold text-[#103d54]">
-              Chỉnh sửa nhân viên
-            </h3>
+        <div className="rounded-xl border border-[#e6eef2] bg-white p-4 sm:p-5">
+          <h2 className="text-[14px] font-extrabold text-[#023648]">Thông tin chi tiết</h2>
+          {!draft ? (
+            <p className="mt-4 text-[12px] text-slate-400">Chọn một nhân viên để xem và chỉnh sửa.</p>
+          ) : (
+            <div className="mt-4 space-y-3.5">
+              <div className="flex items-center gap-3">
+                <img src={draft.avatar || draft.image || "/images/figma-consultant.jpg"} alt={draft.name || "avatar"} className="h-14 w-14 rounded-full object-cover" />
+                <div>
+                  <input
+                    ref={fileRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleAvatarUpload}
+                    className="hidden"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileRef.current?.click()}
+                    className="rounded-md border border-[#e6eef2] px-3 py-1.5 text-[11px] font-semibold text-[#31434e] hover:bg-[#f7fbfc]"
+                  >
+                    Đổi ảnh đại diện
+                  </button>
+                </div>
+              </div>
 
-            {/* Avatar & Thay ảnh */}
-            <div className="flex items-center gap-4 pt-1">
-              <img
-                src={selectedConsultant.avatar}
-                alt={selectedConsultant.name}
-                className="w-16 h-16 rounded-2xl object-cover border border-slate-200 shadow-xs"
-              />
-              <button
-                type="button"
-                className="px-4 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 transition"
-              >
-                Thay ảnh
-              </button>
-            </div>
+              <Field label="Họ và tên" value={draft.name || ""} onChange={(v) => handleDraftChange("name", v)} />
+              <Field label="Vai trò" value={draft.role || ""} onChange={(v) => handleDraftChange("role", v)} />
+              <Field label="Chuyên môn" value={draft.specialty || ""} onChange={(v) => handleDraftChange("specialty", v)} />
+              <Field label="Số điện thoại" value={draft.phone || ""} onChange={(v) => handleDraftChange("phone", v)} />
+              <Field label="Zalo" value={draft.zalo || ""} onChange={(v) => handleDraftChange("zalo", v)} />
+              <Field label="Facebook" value={draft.facebook || ""} onChange={(v) => handleDraftChange("facebook", v)} />
 
-            {/* Form Fields */}
-            <div>
-              <label className="block text-xs font-bold text-slate-600 mb-1">
-                Họ và tên *
+              <label className="block">
+                <span className="mb-1.5 block text-[11px] font-semibold text-[#546f7c]">Trạng thái</span>
+                <select
+                  value={statusOf(draft)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    handleDraftChange("status", val);
+                    handleDraftChange("active", val === "Hoạt động");
+                  }}
+                  className="h-10 w-full rounded-lg border border-[#e6eef2] px-3 text-[12px] text-[#31434e] outline-none focus:border-[#00749d]"
+                >
+                  <option value="Hoạt động">Hoạt động</option>
+                  <option value="Tạm ẩn">Tạm ẩn</option>
+                </select>
               </label>
-              <input
-                type="text"
-                value={selectedConsultant.name}
-                onChange={(e) =>
-                  setSelectedConsultant({ ...selectedConsultant, name: e.target.value })
-                }
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-800 focus:outline-none"
-              />
-            </div>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-600 mb-1">
-                Chuyên môn
-              </label>
-              <input
-                type="text"
-                value={selectedConsultant.specialty || "Nghỉ dưỡng & du thuyền"}
-                onChange={(e) =>
-                  setSelectedConsultant({ ...selectedConsultant, specialty: e.target.value })
-                }
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-800 focus:outline-none"
-              />
+              <div className="flex gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="flex-1 rounded-md bg-[#00749d] px-4 py-2.5 text-[12px] font-semibold text-white transition hover:bg-[#006688] disabled:opacity-60"
+                >
+                  {saving ? "Đang lưu..." : "Lưu thay đổi"}
+                </button>
+                {draft._id && (
+                  <button
+                    type="button"
+                    onClick={handleDelete}
+                    disabled={saving}
+                    className="rounded-md border border-red-200 px-4 py-2.5 text-[12px] font-semibold text-red-600 transition hover:bg-red-50 disabled:opacity-60"
+                  >
+                    Xóa
+                  </button>
+                )}
+              </div>
             </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-600 mb-1">
-                Số điện thoại / Zalo *
-              </label>
-              <input
-                type="text"
-                value={selectedConsultant.phone}
-                onChange={(e) =>
-                  setSelectedConsultant({ ...selectedConsultant, phone: e.target.value })
-                }
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-800 focus:outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-600 mb-1">
-                Facebook
-              </label>
-              <input
-                type="text"
-                value={selectedConsultant.facebook || "facebook.com/20travel.tuvan"}
-                onChange={(e) =>
-                  setSelectedConsultant({ ...selectedConsultant, facebook: e.target.value })
-                }
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-800 focus:outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-600 mb-1">
-                Trạng thái
-              </label>
-              <select
-                value={selectedConsultant.status}
-                onChange={(e) =>
-                  setSelectedConsultant({ ...selectedConsultant, status: e.target.value })
-                }
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-800 focus:outline-none bg-white"
-              >
-                <option value="Hoạt động">Đang hoạt động</option>
-                <option value="Tạm ẩn">Tạm ẩn</option>
-              </select>
-            </div>
-
-            {/* Action buttons */}
-            <div className="flex items-center gap-3 pt-3">
-              <button
-                type="button"
-                onClick={handleSave}
-                className="px-5 py-2.5 rounded-xl bg-[#087eab] text-white text-xs font-bold hover:bg-[#0a6b90] transition"
-              >
-                Lưu thông tin
-              </button>
-              <button
-                type="button"
-                onClick={handleDelete}
-                className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-50 transition"
-              >
-                Xóa
-              </button>
-            </div>
-
-            <p className="text-[11px] text-slate-400 pt-1">
-              Thông tin liên hệ minh họa.
-            </p>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
 };
 
-export default AdminConsultants;
+const Field = ({ label, value, onChange }) => (
+  <label className="block">
+    <span className="mb-1.5 block text-[11px] font-semibold text-[#546f7c]">{label}</span>
+    <input
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="h-10 w-full rounded-lg border border-[#e6eef2] px-3 text-[12px] text-[#31434e] outline-none focus:border-[#00749d]"
+    />
+  </label>
+);
 
+export default AdminConsultants;

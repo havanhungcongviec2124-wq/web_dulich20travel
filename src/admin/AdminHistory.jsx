@@ -1,206 +1,213 @@
-import { useState } from "react";
-import { Download, Search, ChevronDown, CheckCircle2 } from "lucide-react";
-import { activityLogs } from "../data/mockData";
+import { useEffect, useMemo, useState } from "react";
+import { ChevronDown, Download, Search } from "lucide-react";
+import { fetchActivityLogsApi } from "../redux/Api/adminApi";
+
+const PAGE_SIZE = 10;
+
+const csvCell = (value) => `"${String(value ?? "").replace(/"/g, '""')}"`;
 
 const AdminHistory = () => {
-  const [activeTab, setActiveTab] = useState("all"); // "all" | "pricing" | "auth"
-  const [selectedLog, setSelectedLog] = useState(activityLogs[0]);
+  const [logs, setLogs] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [activeTab, setActiveTab] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedAdmin, setSelectedAdmin] = useState("all");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const [page, setPage] = useState(1);
+  const [expandedId, setExpandedId] = useState(null);
 
-  const filteredLogs = activityLogs.filter((log) => {
-    if (activeTab === "pricing" && log.action !== "Cập nhật giá") return false;
-    if (
-      activeTab === "auth" &&
-      log.action !== "Import Excel" &&
-      log.action !== "Đăng nhập"
-    )
-      return false;
-    if (searchQuery && !log.target.toLowerCase().includes(searchQuery.toLowerCase()))
-      return false;
-    if (selectedAdmin !== "all" && log.admin !== selectedAdmin) return false;
-    return true;
-  });
+  const fetchLogs = async () => {
+    try {
+      setLoading(true);
+      setError("");
+      const params = {};
+      if (activeTab !== "all") params.action = activeTab;
+      if (selectedAdmin !== "all") params.admin = selectedAdmin;
+      if (searchQuery.trim()) params.q = searchQuery.trim();
+      if (fromDate) params.from = fromDate;
+      if (toDate) params.to = toDate;
+      params.page = page;
+      params.limit = PAGE_SIZE;
+      const res = await fetchActivityLogsApi(params);
+      const data = Array.isArray(res) ? res : (res?.data || []);
+      setLogs(data);
+      setTotal(res?.total ?? data.length);
+    } catch (err) {
+      setError(err?.message || "Không thể tải lịch sử hoạt động.");
+      setLogs([]);
+      setTotal(0);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLogs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, selectedAdmin, fromDate, toDate, page]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [activeTab, selectedAdmin, fromDate, toDate, searchQuery]);
+
+  const admins = useMemo(() => {
+    const set = new Set(logs.map((l) => l.admin).filter(Boolean));
+    return Array.from(set);
+  }, [logs]);
+
+  const filteredLogs = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return logs;
+    return logs.filter((l) =>
+      [l.action, l.target, l.targetName, l.admin, l.reason, l.dateApplied, l.packageInfo]
+        .some((v) => String(v || "").toLowerCase().includes(q))
+    );
+  }, [logs, searchQuery]);
+
+  const totalPages = Math.max(1, Math.ceil((total || filteredLogs.length) / PAGE_SIZE));
+
+  const exportCsv = () => {
+    const header = ["Thời gian", "Người thực hiện", "Hành động", "Đối tượng", "Tên", "Ngày áp dụng", "Gói", "Giá trước", "Giá sau", "Lý do"];
+    const lines = [header.map(csvCell).join(",")];
+    filteredLogs.forEach((l) => {
+      lines.push([
+        l.time || l.timestamp || l.createdAt || "",
+        l.admin || "",
+        l.action || "",
+        l.target || "",
+        l.targetName || "",
+        l.dateApplied || "",
+        l.packageInfo || "",
+        l.priceBefore || "",
+        l.priceAfter || "",
+        l.reason || "",
+      ].map(csvCell).join(","));
+    });
+    const blob = new Blob(["\uFEFF" + lines.join("\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `lich-su-hoat-dong-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  const actionBadge = (action) => {
+    const a = String(action || "").toLowerCase();
+    if (a.includes("tạo") || a.includes("thêm") || a.includes("import")) return "bg-[#e5f5f6] text-[#008478]";
+    if (a.includes("xóa")) return "bg-red-50 text-red-600";
+    if (a.includes("cập nhật") || a.includes("sửa") || a.includes("giá")) return "bg-[#fff4d8] text-[#a56d00]";
+    return "bg-slate-100 text-slate-600";
+  };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
-      {/* 1. HEADER */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-black text-[#103d54]">
-            Lịch sử hoạt động
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-400 mt-1">
-            Theo dõi ai đã thay đổi điều gì, vào thời điểm nào.
-          </p>
+          <h1 className="text-[22px] leading-tight font-extrabold text-[#023648]">Lịch sử hoạt động</h1>
+          <p className="mt-1 text-[12px] text-slate-400">Theo dõi các thay đổi và thao tác trong hệ thống quản trị.</p>
         </div>
-
-        <div>
-          <button
-            type="button"
-            className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 transition flex items-center gap-2 shadow-xs"
-          >
-            <span>Xuất nhật ký</span>
-            <Download className="w-3.5 h-3.5" />
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={exportCsv}
+          className="inline-flex items-center gap-2 rounded-md border border-[#e6eef2] bg-white px-4 py-2 text-[12px] font-semibold text-[#31434e] transition hover:bg-[#f7fbfc]"
+        >
+          <Download className="h-4 w-4" /> Xuất CSV
+        </button>
       </div>
 
-      {/* 2. TABS */}
-      <div className="flex items-center gap-2">
-        {[
-          { id: "all", label: "Tất cả hoạt động" },
-          { id: "pricing", label: "Thay đổi giá" },
-          { id: "auth", label: "Đăng nhập & hệ thống" },
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`px-5 py-2.5 rounded-xl text-xs font-bold transition ${
-              activeTab === tab.id
-                ? "bg-[#087eab] text-white shadow-xs"
-                : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      {/* 3. FILTERS BAR */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-white p-3.5 rounded-2xl border border-slate-100 shadow-xs">
-        <div className="relative">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Tìm mã hoặc tên dịch vụ..."
-            className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 text-xs font-medium text-slate-800 focus:outline-none"
-          />
-        </div>
-
-        <div>
-          <select
-            value={selectedAdmin}
-            onChange={(e) => setSelectedAdmin(e.target.value)}
-            className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 focus:outline-none bg-white"
-          >
-            <option value="all">Tất cả Admin</option>
-            <option value="Minh Anh">Minh Anh</option>
-            <option value="Hoàng Nam">Hoàng Nam</option>
-          </select>
-        </div>
-
-        <div>
-          <button
-            type="button"
-            className="w-full flex items-center justify-between px-3 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 bg-white"
-          >
-            <span>01/11 – 16/11/2026</span>
-            <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-          </button>
-        </div>
-      </div>
-
-      {/* 4. MAIN CONTENT: TABLE & DETAIL PANEL */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-6">
-        {/* Cột trái: Bảng lịch sử */}
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-xs overflow-hidden h-fit">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr className="text-slate-400 border-b border-slate-100 bg-slate-50/50">
-                  <th className="py-3.5 px-5 font-semibold">Thời gian</th>
-                  <th className="py-3.5 px-4 font-semibold">Admin</th>
-                  <th className="py-3.5 px-4 font-semibold">Hoạt động</th>
-                  <th className="py-3.5 px-5 font-semibold">Đối tượng</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filteredLogs.map((log) => (
-                  <tr
-                    key={log.id}
-                    onClick={() => setSelectedLog(log)}
-                    className={`cursor-pointer transition ${
-                      selectedLog?.id === log.id ? "bg-[#f0f9fb]" : "hover:bg-slate-50/60"
-                    }`}
-                  >
-                    <td className="py-3.5 px-5 font-bold text-slate-800">{log.time}</td>
-                    <td className="py-3.5 px-4 text-slate-600">{log.admin}</td>
-                    <td className="py-3.5 px-4 font-medium text-slate-700">{log.action}</td>
-                    <td className="py-3.5 px-5 font-semibold text-slate-500">{log.target}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      <div className="mt-5 rounded-xl border border-[#e6eef2] bg-white p-4 sm:p-5">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-wrap gap-2">
+            {[
+              { id: "all", label: "Tất cả" },
+              { id: "Cập nhật giá", label: "Cập nhật giá" },
+              { id: "Tạo dịch vụ", label: "Tạo dịch vụ" },
+              { id: "Cập nhật dịch vụ", label: "Cập nhật dịch vụ" },
+              { id: "Import Excel", label: "Import Excel" },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={`rounded-md px-3 py-1.5 text-[11.5px] font-semibold transition ${activeTab === tab.id ? "bg-[#00749d] text-white" : "bg-[#f3f8fa] text-[#546f7c] hover:bg-[#e8f2f5]"}`}
+              >
+                {tab.label}
+              </button>
+            ))}
           </div>
 
-          <div className="p-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-500">
-            <span>Hiển thị 1–{filteredLogs.length} trên 248 hoạt động • Nhật ký chỉ đọc</span>
-            <div className="flex items-center gap-1 self-center">
-              <button className="px-2 py-1 rounded border border-slate-200">←</button>
-              <button className="px-2 py-1 rounded bg-[#087eab] text-white font-bold">1</button>
-              <button className="px-2 py-1 rounded border border-slate-200">2</button>
-              <button className="px-2 py-1 rounded border border-slate-200">3</button>
-              <span className="px-1">...</span>
-              <button className="px-2 py-1 rounded border border-slate-200">→</button>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative">
+              <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && fetchLogs()}
+                placeholder="Tìm kiếm..."
+                className="h-9 w-[220px] rounded-md border border-[#e6eef2] pr-3 pl-9 text-[11.5px] text-[#31434e] outline-none focus:border-[#00749d]"
+              />
             </div>
+            <div className="relative">
+              <select
+                value={selectedAdmin}
+                onChange={(e) => setSelectedAdmin(e.target.value)}
+                className="h-9 appearance-none rounded-md border border-[#e6eef2] bg-white pr-7 pl-3 text-[11.5px] font-medium text-[#31434e] outline-none"
+              >
+                <option value="all">Người thực hiện</option>
+                {admins.map((a) => <option key={a} value={a}>{a}</option>)}
+              </select>
+              <ChevronDown className="pointer-events-none absolute top-1/2 right-2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+            </div>
+            <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="h-9 rounded-md border border-[#e6eef2] px-2 text-[11.5px] text-[#31434e] outline-none" />
+            <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="h-9 rounded-md border border-[#e6eef2] px-2 text-[11.5px] text-[#31434e] outline-none" />
+            <button type="button" onClick={fetchLogs} className="h-9 rounded-md bg-[#00749d] px-3 text-[11.5px] font-semibold text-white hover:bg-[#006688]">Lọc</button>
           </div>
         </div>
 
-        {/* Cột phải: Chi tiết thay đổi */}
-        {selectedLog && (
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-xs p-6 space-y-4 h-fit">
-            <h3 className="text-sm font-bold text-[#103d54]">
-              Chi tiết thay đổi
-            </h3>
+        {error && <p className="mt-3 text-[12px] text-red-600">{error}</p>}
 
-            {/* Badge */}
-            <div>
-              <span className="inline-block px-3 py-1 rounded-full bg-[#eaf6f7] text-[#00877c] text-xs font-bold">
-                {selectedLog.action}
-              </span>
-            </div>
+        <div className="mt-4 overflow-x-auto">
+          <table className="w-full min-w-[760px] text-left text-[12px]">
+            <thead>
+              <tr className="border-b border-[#edf3f5] text-[10.5px] font-semibold text-slate-400">
+                <th className="py-2.5 pr-3 font-semibold">Thời gian</th>
+                <th className="py-2.5 pr-3 font-semibold">Người thực hiện</th>
+                <th className="py-2.5 pr-3 font-semibold">Hành động</th>
+                <th className="py-2.5 pr-3 font-semibold">Đối tượng</th>
+                <th className="py-2.5 pr-3 font-semibold">Chi tiết</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr><td colSpan={5} className="py-8 text-center text-[12px] text-slate-400">Đang tải...</td></tr>
+              ) : filteredLogs.length === 0 ? (
+                <tr><td colSpan={5} className="py-8 text-center text-[12px] text-slate-400">Không có lịch sử phù hợp.</td></tr>
+              ) : (
+                filteredLogs.map((log) => {
+                  const id = log._id || log.id || `${log.timestamp}-${log.action}-${log.targetName}`;
+                  const open = expandedId === id;
+                  return (
+                    <FragmentRow key={id} log={log} open={open} onToggle={() => setExpandedId(open ? null : id)} actionBadge={actionBadge} />
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
 
-            <div>
-              <h4 className="text-base font-black text-[#103d54]">
-                {selectedLog.targetName}
-              </h4>
-              <p className="text-xs text-slate-400 mt-1">
-                Ngày áp dụng: {selectedLog.dateApplied}
-              </p>
-              <p className="text-xs text-slate-400">
-                {selectedLog.packageInfo}
-              </p>
-            </div>
-
-            {/* Before / After cards */}
-            <div className="space-y-3 pt-2">
-              <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 space-y-1">
-                <span className="text-[10px] font-bold text-slate-400 tracking-wider uppercase block">
-                  TRƯỚC
-                </span>
-                <span className="text-2xl font-black text-slate-500">
-                  {selectedLog.priceBefore}
-                </span>
-              </div>
-
-              <div className="p-4 rounded-xl bg-[#eaf6f7] border border-[#d2eeec] space-y-1">
-                <span className="text-[10px] font-bold text-[#00877c] tracking-wider uppercase block">
-                  SAU
-                </span>
-                <span className="text-2xl font-black text-[#087eab]">
-                  {selectedLog.priceAfter}
-                </span>
-              </div>
-            </div>
-
-            {/* Metadata info */}
-            <div className="pt-2 border-t border-slate-100 space-y-1 text-xs text-slate-500">
-              <p>Bởi {selectedLog.admin} • {selectedLog.timestamp}</p>
-              <p className="text-slate-600 font-medium">Lý do: {selectedLog.reason}</p>
-            </div>
+        {totalPages > 1 && (
+          <div className="mt-4 flex items-center justify-end gap-2">
+            {Array.from({ length: Math.min(totalPages, 8) }, (_, i) => i + 1).map((n) => (
+              <button key={n} type="button" onClick={() => setPage(n)} className={`h-8 min-w-8 rounded-md px-2 text-[11px] font-semibold ${page === n ? "bg-[#00749d] text-white" : "border border-[#e6eef2] text-[#31434e] hover:bg-[#f7fbfc]"}`}>
+                {n}
+              </button>
+            ))}
           </div>
         )}
       </div>
@@ -208,5 +215,47 @@ const AdminHistory = () => {
   );
 };
 
-export default AdminHistory;
+const FragmentRow = ({ log, open, onToggle, actionBadge }) => (
+  <>
+    <tr className="border-b border-[#f4f8fa] text-[#31434e]">
+      <td className="py-3 pr-3 text-slate-500 whitespace-nowrap">{log.time || (log.createdAt ? new Date(log.createdAt).toLocaleString("vi-VN") : "—")}</td>
+      <td className="py-3 pr-3 font-medium text-[#023648]">{log.admin || "—"}</td>
+      <td className="py-3 pr-3">
+        <span className={`inline-flex rounded-md px-2.5 py-0.5 text-[10.5px] font-semibold ${actionBadge(log.action)}`}>{log.action || "—"}</span>
+      </td>
+      <td className="py-3 pr-3">
+        <div className="font-medium text-[#023648]">{log.target || "—"}</div>
+        <div className="text-[10.5px] text-slate-400">{log.targetName || ""}</div>
+      </td>
+      <td className="py-3 pr-3">
+        <button type="button" onClick={onToggle} className="text-[11px] font-semibold text-[#00749d] hover:underline">
+          {open ? "Ẩn" : "Xem"}
+        </button>
+      </td>
+    </tr>
+    {open && (
+      <tr className="border-b border-[#f4f8fa] bg-[#fafcfd]">
+        <td colSpan={5} className="px-3 py-3">
+          <div className="grid grid-cols-1 gap-2 text-[11.5px] text-[#546f7c] sm:grid-cols-2 lg:grid-cols-3">
+            <Info label="Ngày áp dụng" value={log.dateApplied || "—"} />
+            <Info label="Gói/Thông tin" value={log.packageInfo || "—"} />
+            <Info label="Giá trước" value={log.priceBefore || "—"} />
+            <Info label="Giá sau" value={log.priceAfter || "—"} />
+            <div className="sm:col-span-2 lg:col-span-3">
+              <Info label="Lý do/Ghi chú" value={log.reason || "—"} />
+            </div>
+          </div>
+        </td>
+      </tr>
+    )}
+  </>
+);
 
+const Info = ({ label, value }) => (
+  <div>
+    <span className="text-slate-400">{label}: </span>
+    <span className="font-medium text-[#31434e]">{value}</span>
+  </div>
+);
+
+export default AdminHistory;
