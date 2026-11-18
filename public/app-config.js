@@ -2,4 +2,4 @@
 // Set this to your deployed backend API URL, e.g. "https://your-backend-host/api".
 // Leave empty to use build-time VITE_API_URL or same-origin relative requests.
 // Temporary tunnel URL (requires local backend + tunnel process running).
-window.__API_BASE_URL__ = "https://few-monkeys-grab.loca.lt/api";
+window.__API_BASE_URL__ = "https://tall-facts-happen.loca.lt/api";
