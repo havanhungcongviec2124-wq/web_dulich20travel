@@ -1,8 +1,17 @@
 import { api } from "./http";
 
-export const fetchConsultantsApi = (params = {}) => {
+const loadMock = async () => import("../../data/mockData.js");
+
+export const fetchConsultantsApi = async (params = {}) => {
   const qs = params.active ? "?active=true" : "";
-  return api.get(`/api/consultants${qs}`);
+  try {
+    return await api.get(`/api/consultants${qs}`);
+  } catch {
+    const { consultants } = await loadMock();
+    let list = Array.isArray(consultants) ? consultants : [];
+    if (params.active) list = list.filter((c) => c.active !== false && c.status !== "Tạm ẩn");
+    return { data: list };
+  }
 };
 
 export const createConsultantApi = (payload) => api.post("/api/consultants", payload, { auth: true });
