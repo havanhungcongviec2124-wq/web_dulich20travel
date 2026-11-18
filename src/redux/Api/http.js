@@ -1,7 +1,16 @@
 const TOKEN_KEY = "20travel_admin_token";
 
 export const getBaseUrl = () => {
-  const url = (import.meta.env.VITE_API_URL || "http://localhost:5000").trim();
+  const runtime =
+    typeof window !== "undefined" && window.__API_BASE_URL__ != null
+      ? String(window.__API_BASE_URL__)
+      : "";
+  const env = import.meta.env.VITE_API_URL != null ? String(import.meta.env.VITE_API_URL) : "";
+  const isLocalHost =
+    typeof window !== "undefined" &&
+    /^(localhost|127\.0\.0\.1)$/i.test(window.location.hostname);
+  const fallback = isLocalHost ? "http://localhost:5000" : "";
+  const url = (runtime || env || fallback).trim();
   return url.replace(/\/+$/, "");
 };
 
