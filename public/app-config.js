@@ -5,5 +5,5 @@
   var isLocal = /^(localhost|127\.0\.0\.1|0\.0\.0\.0)$/i.test(location.hostname);
   window.__API_BASE_URL__ = isLocal
     ? ""
-    : "https://web-dulich20travel-backend.havanhungcongviec2124.workers.dev";
+    : "https://web-dulich20travel-backend.onrender.com";
 })();
