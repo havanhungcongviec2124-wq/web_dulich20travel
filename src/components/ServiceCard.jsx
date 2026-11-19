@@ -3,6 +3,7 @@ import { useSelector } from "react-redux";
 import { ArrowUpRight, MapPin, Star } from "lucide-react";
 import { formatCurrency, cn, formatDate } from "../lib/format";
 
+const serviceHref = (service) => `/dich-vu/${service?.slug || service?.code || service?.id || service?._id || ""}`;
 const unitLabel = (service) => (service.priceUnit ? `/ ${service.priceUnit}` : "");
 
 export const CategoryPill = ({ categoryId, className }) => {
@@ -32,7 +33,7 @@ export const ServiceCard = ({ service, displayPrice, className }) => (
       className
     )}
   >
-    <Link to={`/dich-vu/${service.slug}`} className="relative block h-[155px] shrink-0 overflow-hidden rounded-t-2xl lg:h-[176px]">
+    <Link to={serviceHref(service)} className="relative block h-[155px] shrink-0 overflow-hidden rounded-t-2xl lg:h-[176px]">
       <img
         src={service.image}
         alt={service.name}
@@ -44,7 +45,7 @@ export const ServiceCard = ({ service, displayPrice, className }) => (
 
     <div className="flex flex-1 flex-col px-4 pt-[22px] pb-[6px] lg:px-5 lg:pt-[24px]">
       <div className="flex items-start justify-between gap-2">
-        <Link to={`/dich-vu/${service.slug}`} className="min-w-0">
+        <Link to={serviceHref(service)} className="min-w-0">
           <h3 className="line-clamp-1 text-[16px] leading-snug font-semibold text-ocean-950 transition group-hover:text-ocean-700 lg:text-[16.5px]">
             {service.name}
           </h3>
@@ -86,7 +87,7 @@ export const ServiceCard = ({ service, displayPrice, className }) => (
 export const ServiceRow = ({ service, displayPrice }) => (
   <article className="group flex flex-col overflow-hidden rounded-xl bg-white shadow-[0_8px_26px_-24px_rgba(16,61,84,0.45)] transition hover:shadow-[0_18px_40px_-26px_rgba(16,61,84,0.45)] md:flex-row md:gap-0 md:p-3">
     <Link
-      to={`/dich-vu/${service.slug}`}
+      to={serviceHref(service)}
       className="relative block h-44 shrink-0 overflow-hidden rounded-t-xl md:h-[206px] md:w-[265px] md:rounded-xl"
     >
       <img
@@ -100,7 +101,7 @@ export const ServiceRow = ({ service, displayPrice }) => (
 
     <div className="flex min-w-0 flex-1 gap-4 px-4 pt-4 pb-4 md:px-[22px] md:py-2.5">
       <div className="flex min-w-0 flex-1 flex-col">
-        <Link to={`/dich-vu/${service.slug}`}>
+        <Link to={serviceHref(service)}>
           <h3 className="line-clamp-1 text-[18px] leading-snug font-semibold text-ocean-950 transition group-hover:text-ocean-700 md:text-[20px]">
             {service.name}
           </h3>
@@ -135,7 +136,7 @@ export const ServiceRow = ({ service, displayPrice }) => (
           <span className="mt-1.5 block text-[10.5px] text-ink-500">{unitLabel(service)}</span>
         </div>
         <Link
-          to={`/dich-vu/${service.slug}`}
+          to={serviceHref(service)}
           className="flex h-[46px] w-[194px] shrink-0 items-center justify-center rounded-[10px] bg-ocean-600 text-[13px] font-semibold text-white transition hover:bg-ocean-700"
         >
           Xem chi tiết
@@ -154,7 +155,7 @@ export const ServiceRow = ({ service, displayPrice }) => (
     </div>
 
     <Link
-      to={`/dich-vu/${service.slug}`}
+      to={serviceHref(service)}
       className="mx-4 mb-4 flex h-11 items-center justify-center rounded-[10px] bg-ocean-600 text-[13px] font-semibold text-white md:hidden"
     >
       Xem chi tiết
