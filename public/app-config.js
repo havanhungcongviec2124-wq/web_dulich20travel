@@ -1,5 +1,6 @@
 // Runtime API base URL for production deployments.
 // Set this to your deployed backend API URL, e.g. "https://your-backend-host/api".
 // Leave empty to use build-time VITE_API_URL or same-origin relative requests.
-// Temporary tunnel URL (requires local backend + tunnel process running).
-window.__API_BASE_URL__ = "https://reseller-rely-pitch-exterior.trycloudflare.com/api";
+// Set this to your stable backend API URL, e.g. "https://your-backend-host/api".
+// Leave empty when no backend is configured.
+window.__API_BASE_URL__ = "";
