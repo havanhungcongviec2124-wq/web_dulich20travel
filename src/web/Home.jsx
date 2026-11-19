@@ -5,7 +5,7 @@ import { ArrowRight, Phone, Check } from "lucide-react";
 import SearchPanel from "../components/SearchPanel";
 import ServiceCard from "../components/ServiceCard";
 import { CategoryIcon } from "../lib/icons";
-import { IMG } from "../data/images";
+import { IMG } from "../lib/images";
 
 const defaultCompany = {
   hotline: "036 271 5585",

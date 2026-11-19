@@ -1,6 +1,3 @@
 // Runtime API base URL for production deployments.
-// Set this to your deployed backend API URL, e.g. "https://your-backend-host/api".
-// Leave empty to use build-time VITE_API_URL or same-origin relative requests.
-// Set this to your stable backend API URL, e.g. "https://your-backend-host/api".
-// Leave empty when no backend is configured.
-window.__API_BASE_URL__ = "";
+// Points frontend to the deployed backend API (must serve /api/*).
+window.__API_BASE_URL__ = "https://web-dulich20travel-backend.havanhungcongviec2124.workers.dev";
