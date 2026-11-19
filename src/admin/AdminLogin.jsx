@@ -227,10 +227,6 @@ const AdminLogin = () => {
                   {!loading && <ArrowRight className="h-3.5 w-3.5" />}
                 </button>
 
-                <div className="rounded-lg border border-[#d8f0f4] bg-[#f0f9fb] px-3 py-2 text-center text-[10.5px] font-medium text-[#00749d]">
-                  Tài khoản demo: <b>{DEMO_EMAIL}</b> / <b>{DEMO_PASSWORD}</b>
-                </div>
-
                 <div className="pt-2 text-center">
                   <Link
                     to="/home"
