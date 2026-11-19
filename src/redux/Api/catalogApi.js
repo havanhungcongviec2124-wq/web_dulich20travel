@@ -63,8 +63,20 @@ export const fetchServicesApi = (params = {}) =>
 
 export const fetchServiceBySlugApi = (slug) =>
   withMock(
-    () => api.get(`/api/services/slug/${encodeURIComponent(slug)}`),
+    () => {
+      if (!slug || slug === "undefined" || slug === "null") {
+        const err = new Error("Không tìm thấy dịch vụ.");
+        err.status = 404;
+        return Promise.reject(err);
+      }
+      return api.get(`/api/services/slug/${encodeURIComponent(slug)}`);
+    },
     async () => {
+      if (!slug || slug === "undefined" || slug === "null") {
+        const err = new Error("Không tìm thấy dịch vụ.");
+        err.status = 404;
+        throw err;
+      }
       const { services } = await loadMock();
       const list = Array.isArray(services) ? services : [];
       const found = list.find((s) => s.slug === slug || s.code === slug || s.id === slug);
