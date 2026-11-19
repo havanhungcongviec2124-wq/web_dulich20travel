@@ -74,6 +74,17 @@ export async function apiFetch(path, options = {}) {
     err.data = data;
     throw err;
   }
+
+  // Static/SPA deployments may return 200 HTML for unknown /api paths.
+  // Treat that as API unavailable so read endpoints can fall back to mock data.
+  const looksLikeHtml = typeof data === "string" && /^\s*<(?:!doctype|html)\b/i.test(data);
+  if (looksLikeHtml || contentType.includes("text/html")) {
+    const err = new Error("API unavailable");
+    err.status = 502;
+    err.data = data;
+    throw err;
+  }
+
   return data;
 }
 
