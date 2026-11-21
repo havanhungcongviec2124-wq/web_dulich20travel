@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { useSelector } from "react-redux";
 import Logo from "./Logo";
+import { toZaloAppLink } from "../lib/format";
 
 const defaultCompany = {
   brand: "20 TRAVEL",
@@ -48,7 +49,7 @@ const ContactLinks = ({ company }) => (
     <a href={company.facebook} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 transition hover:text-white">
       <span className="text-white/35">+</span> Facebook
     </a>
-    <a href={company.zalo} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 transition hover:text-white">
+    <a href={toZaloAppLink(company.zalo)} rel="noreferrer" className="inline-flex items-center gap-1.5 transition hover:text-white">
       <span className="text-white/35">+</span> Zalo
     </a>
   </div>
@@ -130,7 +131,7 @@ const Footer = ({ variant = "inner" }) => {
                   </a>
                 </li>
                 <li>
-                  <a href={company.zalo} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 transition hover:text-white">
+                  <a href={toZaloAppLink(company.zalo)} rel="noreferrer" className="inline-flex items-center gap-2 transition hover:text-white">
                     <span className="text-white/35">+</span> Zalo – Tư vấn du lịch
                   </a>
                 </li>
@@ -159,7 +160,7 @@ const Footer = ({ variant = "inner" }) => {
             Hotline {company.hotline}
           </a>
           <span className="text-white/30">-</span>
-          <a href={company.zalo} target="_blank" rel="noreferrer" className="transition hover:text-white">
+          <a href={toZaloAppLink(company.zalo)} rel="noreferrer" className="transition hover:text-white">
             Zalo
           </a>
           <span className="text-white/30">-</span>

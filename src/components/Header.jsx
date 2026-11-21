@@ -3,7 +3,7 @@ import { Link, NavLink, useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { Menu, Phone, X, MessageCircle } from "lucide-react";
 import Logo from "./Logo";
-import { cn } from "../lib/format";
+import { cn, toZaloAppLink } from "../lib/format";
 
 const defaultCompany = {
   hotline: "036 271 5585",
@@ -134,7 +134,7 @@ const Header = () => {
             <a href={`tel:${company.hotlineRaw}`} className="btn-primary !py-2.5 text-[13px]">
               <Phone className="h-4 w-4" /> Gọi ngay
             </a>
-            <a href={company.zalo} target="_blank" rel="noreferrer" className="btn-ghost !py-2.5 text-[13px]">
+            <a href={toZaloAppLink(company.zalo)} rel="noreferrer" className="btn-ghost !py-2.5 text-[13px]">
               <MessageCircle className="h-4 w-4" /> Chat Zalo
             </a>
           </div>

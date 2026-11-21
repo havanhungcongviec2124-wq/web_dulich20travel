@@ -109,7 +109,7 @@ const PriceCalendar = ({ service, value, endDate, rangeMode, onChange, pricing, 
                 "flex h-11.25 flex-col cursor-pointer items-start justify-between rounded-lg px-1.75 py-1.25 text-left transition md:h-15.25 md:px-2.25 md:py-1.5",
                 !active && !isEnd && (type.id === "weekend" ? "border-2 border-ocean-600" : type.id === "holiday" ? "bg-amber-50" : type.id === "otherDays" ? "bg-sky-50" : "bg-ocean-50"),
                 active && "bg-ocean-600",
-                !active && isEnd && "bg-ocean-400 ring-2 ring-ocean-600/60",
+                !active && isEnd && "bg-ocean-500 ring-2 ring-ocean-600/60",
                 !active && !isEnd && "hover:bg-ocean-100/70",
                 inStay && !isStart && "ring-1 ring-ocean-500/30"
               )}

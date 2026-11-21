@@ -6,6 +6,7 @@ import SearchPanel from "../components/SearchPanel";
 import ServiceCard from "../components/ServiceCard";
 import { CategoryIcon } from "../lib/icons";
 import { IMG } from "../lib/images";
+import { toZaloAppLink } from "../lib/format";
 
 const defaultCompany = {
   hotline: "036 271 5585",
@@ -223,7 +224,7 @@ const Home = () => {
 
                   <div className="mt-[20px] hidden flex-wrap gap-3 lg:flex">
                     <a
-                      href={company.zalo || homeConsultant.zalo}
+                      href={toZaloAppLink(company.zalo || homeConsultant.zalo)}
                       target="_blank"
                       rel="noreferrer"
                       className="inline-flex h-12 w-[142px] items-center justify-center rounded-xl bg-ocean-600 text-[12.5px] font-semibold text-white transition hover:bg-ocean-700"
@@ -244,7 +245,7 @@ const Home = () => {
 
               <div className="mt-[29px] grid grid-cols-2 gap-[18px] lg:hidden">
                 <a
-                  href={company.zalo || homeConsultant.zalo}
+                  href={toZaloAppLink(company.zalo || homeConsultant.zalo)}
                   target="_blank"
                   rel="noreferrer"
                   className="flex h-12 items-center justify-center rounded-xl bg-ocean-600 text-[12.5px] font-semibold text-white transition hover:bg-ocean-700"

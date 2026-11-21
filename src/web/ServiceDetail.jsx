@@ -19,7 +19,7 @@ import {
   X,
 } from "lucide-react";
 import PriceCalendar from "../components/PriceCalendar";
-import { cn, formatCurrency, formatDate, toISODate } from "../lib/format";
+import { cn, formatCurrency, formatDate, toISODate, toZaloAppLink } from "../lib/format";
 import { computePriceForDate, getDailyPriceMap } from "../lib/pricing";
 import { fetchServiceBySlug, clearSelectedService } from "../redux/slices/catalogSlice";
 import { fetchCalendar } from "../redux/slices/pricingSlice";
@@ -601,8 +601,7 @@ const ServiceDetail = () => {
             </div>
 
             <a
-              href={company.zalo || consultant.zalo}
-              target="_blank"
+              href={toZaloAppLink(company.zalo || consultant.zalo)}
               rel="noreferrer"
               className="mt-5.75 flex h-12 items-center justify-center rounded-[10px] bg-ocean-600 text-[13px] font-semibold text-white transition hover:bg-ocean-700 lg:mt-7.75 lg:h-11.5"
             >
@@ -611,8 +610,7 @@ const ServiceDetail = () => {
 
             <div className="mt-3 hidden gap-2 lg:flex">
               <a
-                href={company.zalo || consultant.zalo}
-                target="_blank"
+                href={toZaloAppLink(company.zalo || consultant.zalo)}
                 rel="noreferrer"
                 className="flex h-11.25 w-1/2 items-center justify-center rounded-[10px] bg-white text-[12px] font-semibold text-ocean-900 ring-1 ring-ocean-100 transition hover:bg-ocean-50"
               >
@@ -658,8 +656,7 @@ const ServiceDetail = () => {
 
             <div className="mt-[35px] grid grid-cols-2 gap-4 lg:hidden">
               <a
-                href={company.zalo || consultant.zalo}
-                target="_blank"
+                href={toZaloAppLink(company.zalo || consultant.zalo)}
                 rel="noreferrer"
                 className="flex h-12 items-center justify-center rounded-[10px] bg-ocean-600 text-[12px] font-semibold text-white"
               >
@@ -674,7 +671,7 @@ const ServiceDetail = () => {
             </div>
 
             <div className="mt-5 hidden items-center gap-3 text-[10.5px] text-ink-500 lg:mt-[17px] lg:flex">
-              <a href={company.zalo || consultant.zalo} target="_blank" rel="noreferrer" className="font-medium text-ocean-800 hover:text-ocean-950">
+              <a href={toZaloAppLink(company.zalo || consultant.zalo)} rel="noreferrer" className="font-medium text-ocean-800 hover:text-ocean-950">
                 Zalo
               </a>
               <span className="text-ocean-200">·</span>

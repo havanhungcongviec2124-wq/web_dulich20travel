@@ -13,7 +13,7 @@ import {
   Search,
   Send,
 } from "lucide-react";
-import { cn } from "../lib/format";
+import { cn, toZaloAppLink } from "../lib/format";
 
 const FacebookIcon = (props) => (
   <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" {...props}>
@@ -76,7 +76,7 @@ const Contact = () => {
       label: "Chat Zalo",
       value: company.hotline,
       note: "Phản hồi trong 5 phút",
-      href: company.zalo,
+      href: toZaloAppLink(company.zalo),
       icon: MessageCircle,
       cta: "Nhắn Zalo",
     },
@@ -222,8 +222,7 @@ const Contact = () => {
 
               <div className="mt-5 grid grid-cols-2 gap-2.5">
                 <a
-                  href={company.zalo}
-                  target="_blank"
+                  href={toZaloAppLink(company.zalo)}
                   rel="noreferrer"
                   className="flex h-[45px] items-center justify-center gap-2 rounded-[10px] bg-sea-50 text-[12px] font-semibold text-ocean-800 transition hover:bg-sea-100"
                 >
@@ -289,8 +288,7 @@ const Contact = () => {
                     <Phone className="h-3.5 w-3.5" /> Gọi
                   </a>
                   <a
-                    href={person.zalo || company.zalo}
-                    target="_blank"
+                    href={toZaloAppLink(person.zalo || company.zalo)}
                     rel="noreferrer"
                     className="grid h-9 w-9 place-items-center rounded-lg bg-ocean-600 text-white transition hover:bg-ocean-700"
                     aria-label={`Chat Zalo ${person.name}`}

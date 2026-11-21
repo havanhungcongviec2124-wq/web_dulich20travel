@@ -69,3 +69,17 @@ export const initials = (name = "") =>
     .map((w) => w[0])
     .join("")
     .toUpperCase();
+
+export const toZaloAppLink = (value) => {
+  if (!value) return "";
+  const raw = String(value).trim();
+  if (!raw) return "";
+  if (/^zalo:\/\//i.test(raw)) return raw;
+  // group/invite links - keep original
+  if (/zalo\.me\/g\//i.test(raw)) return raw;
+  const phoneMatch =
+    raw.match(/(?:zalo\.me\/|phone=)(\+?[\d\s().-]{8,})/i) || raw.match(/^(\+?[\d\s().-]{8,})$/);
+  const phone = phoneMatch ? phoneMatch[1].replace(/[^\d+]/g, "") : "";
+  if (phone && /\d{8,}/.test(phone)) return `zalo://conversation?phone=${phone}`;
+  return raw;
+};
