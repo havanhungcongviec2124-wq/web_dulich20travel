@@ -95,9 +95,8 @@ const PriceCalendar = ({ service, value, endDate, rangeMode, onChange, pricing, 
 
           const isStart = value === iso;
           const isEnd = rangeMode && endDate === iso;
-          const inStay = hasRange && iso >= value && iso < endDate; 
+          const inStay = hasRange && iso >= value && iso < endDate;
           const active = rangeMode ? (isStart || inStay) : isStart;
-          const rangeEdge = isStart || (isEnd && hasRange);
 
           return (
             <button
@@ -110,7 +109,7 @@ const PriceCalendar = ({ service, value, endDate, rangeMode, onChange, pricing, 
                 "flex h-11.25 flex-col cursor-pointer items-start justify-between rounded-lg px-1.75 py-1.25 text-left transition md:h-15.25 md:px-2.25 md:py-1.5",
                 !active && !isEnd && (type.id === "weekend" ? "border-2 border-ocean-600" : type.id === "holiday" ? "bg-amber-50" : type.id === "otherDays" ? "bg-sky-50" : "bg-ocean-50"),
                 active && "bg-ocean-600",
-                !active && isEnd && "bg-sea-200 ring-2 ring-ocean-600/50",
+                !active && isEnd && "bg-ocean-400 ring-2 ring-ocean-600/60",
                 !active && !isEnd && "hover:bg-ocean-100/70",
                 inStay && !isStart && "ring-1 ring-ocean-500/30"
               )}
@@ -118,7 +117,7 @@ const PriceCalendar = ({ service, value, endDate, rangeMode, onChange, pricing, 
               <span
                 className={cn(
                   "text-[10.5px] leading-none font-semibold md:text-[12.5px]",
-                  active ? "text-white" : isEnd ? "text-ocean-950" : "text-ocean-950"
+                  active || isEnd ? "text-white" : "text-ocean-950"
                 )}
               >
                 {date.getDate()}
@@ -126,7 +125,7 @@ const PriceCalendar = ({ service, value, endDate, rangeMode, onChange, pricing, 
               <span
                 className={cn(
                   "text-[8.5px] leading-none font-medium md:text-[11.5px]",
-                  active ? "text-white" : "text-ink-600"
+                  active || isEnd ? "text-white" : "text-ink-600"
                 )}
               >
                 <span className="md:hidden">{compactPrice(price)}</span>
@@ -154,7 +153,7 @@ const PriceCalendar = ({ service, value, endDate, rangeMode, onChange, pricing, 
               <LegendDot className="bg-ocean-600" /> Đêm lưu trú (tính tiền)
             </span>
             <span className="inline-flex items-center gap-2">
-              <LegendDot className="bg-sea-200 ring-2 ring-ocean-600/50" /> Trả phòng
+              <LegendDot className="bg-ocean-400 ring-2 ring-ocean-600/50" /> Trả phòng
             </span>
           </>
         ) : (
