@@ -146,7 +146,7 @@ const AdminServices = () => {
   const imageInputRef = useRef(null);
 
   useEffect(() => {
-    dispatch(fetchServices({ limit: 500 }));
+    dispatch(fetchServices({ limit: 500, full: true }));
     dispatch(fetchCategories());
     dispatch(fetchConsultants());
   }, [dispatch]);
@@ -161,7 +161,7 @@ const AdminServices = () => {
   }, [categoriesFromStore]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const reloadAll = async () => {
-    await Promise.all([dispatch(fetchServices({ limit: 500 })), dispatch(fetchCategories())]);
+    await Promise.all([dispatch(fetchServices({ limit: 500, full: true })), dispatch(fetchCategories())]);
   };
 
   const statTiles = useMemo(() => {
