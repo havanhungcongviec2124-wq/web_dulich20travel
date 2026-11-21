@@ -5,18 +5,15 @@ import { Eye, EyeOff, ArrowRight, ArrowLeft, Mail, CheckCircle2 } from "lucide-r
 import { loginAdmin, fetchMe } from "../redux/slices/authSlice";
 import { forgotPasswordApi } from "../redux/Api/authApi";
 
-const DEMO_EMAIL = "admin@20travel.vn";
-const DEMO_PASSWORD = "20travel2026";
-
 const AdminLogin = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { user, token, status, error: authError, initialized } = useSelector((s) => s.auth);
 
-  const [email, setEmail] = useState(localStorage.getItem("20travel_admin_email") || DEMO_EMAIL);
-  const [password, setPassword] = useState(DEMO_PASSWORD);
+  const [email, setEmail] = useState(() => localStorage.getItem("20travel_admin_email") || "");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [remember, setRemember] = useState(true);
+  const [remember, setRemember] = useState(() => localStorage.getItem("20travel_admin_remember") === "1");
   const [error, setError] = useState("");
   const [mode, setMode] = useState("login"); // "login" | "forgot"
   const [resetEmail, setResetEmail] = useState("");
