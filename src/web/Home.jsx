@@ -281,7 +281,7 @@ const Home = () => {
               </p>
               <a
                 href={`tel:${company.hotlineRaw || "0362715585"}`}
-                className="mt-[18px] inline-flex items-center gap-3 text-[26px] font-bold tracking-tight text-ocean-950"
+                className="mt-[18px] text-sea-600 inline-flex items-center gap-3 text-[26px] font-bold tracking-tight"
               >
                 <Phone className="h-5 w-5 text-sea-600" />
                 {company.hotline}
@@ -292,7 +292,7 @@ const Home = () => {
             </aside>
           </div>
         </div>
-      </section>
+      </section> 
     </main>
   );
 };

@@ -152,7 +152,7 @@ const AdminLogin = () => {
                       setEmail(e.target.value);
                       setError("");
                     }}
-                    placeholder="admin@20travel.vn"
+                    placeholder="Hãy nhập email quản trị"
                     className="w-full rounded-lg border border-[#e6eef2] px-3.5 py-2.5 text-[12.5px] font-medium text-[#31434e] outline-none transition focus:border-[#00749d] focus:ring-2 focus:ring-[#00749d]/15"
                     required
                   />
