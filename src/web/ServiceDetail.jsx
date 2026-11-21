@@ -101,6 +101,7 @@ const ServiceDetail = () => {
 
   const [date, setDate] = useState(defaultDate);
   const [checkOut, setCheckOut] = useState(() => addDaysISO(defaultDate, 1));
+  const [pickingCheckout, setPickingCheckout] = useState(false);
   const [tab, setTab] = useState("overview");
   const [lightbox, setLightbox] = useState(false);
   const [viewerIndex, setViewerIndex] = useState(null);
@@ -151,19 +152,45 @@ const ServiceDetail = () => {
 
   const handleDateChange = (nextDate) => {
     if (!nextDate) return;
-    setDate(nextDate);
-    if (nightly) {
-      setCheckOut((prev) => {
-        const p = prev && new Date(`${prev}T00:00:00`) > new Date(`${nextDate}T00:00:00`) ? prev : addDaysISO(nextDate, 1);
-        return p;
-      });
+    if (!nightly) {
+      setDate(nextDate);
+      return;
     }
+    if (!pickingCheckout) {
+      setDate(nextDate);
+      setCheckOut(addDaysISO(nextDate, 1));
+      setPickingCheckout(true);
+      return;
+    }
+    const start = new Date(`${date}T00:00:00`);
+    const picked = new Date(`${nextDate}T00:00:00`);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(picked.getTime())) return;
+    if (picked <= start) {
+      setDate(nextDate);
+      setCheckOut(addDaysISO(nextDate, 1));
+      setPickingCheckout(true);
+      return;
+    }
+    setCheckOut(nextDate);
+    setPickingCheckout(false);
+  };
+
+  const handleCheckInInput = (nextDate) => {
+    if (!nextDate) return;
+    setDate(nextDate);
+    setPickingCheckout(true);
+    setCheckOut((prev) => {
+      const minOut = addDaysISO(nextDate, 1);
+      if (!prev) return minOut;
+      return new Date(`${prev}T00:00:00`) > new Date(`${nextDate}T00:00:00`) ? prev : minOut;
+    });
   };
 
   const handleCheckOutChange = (nextOut) => {
     if (!nextOut) return;
     const minOut = addDaysISO(date, 1);
     setCheckOut(new Date(`${nextOut}T00:00:00`) <= new Date(`${date}T00:00:00`) ? minOut : nextOut);
+    setPickingCheckout(false);
   };
 
   const pricingFor = useCallback(
@@ -390,14 +417,14 @@ const ServiceDetail = () => {
               </div>
 
               <div className="mt-7.75 lg:mt-10">
-                <CalendarSection service={resolvedService} date={date} onChange={handleDateChange} pricing={pricingForMonth} onMonthChange={onMonthChange} />
+                <CalendarSection service={resolvedService} date={date} checkOut={nightly ? checkOut : null} rangeMode={nightly} onChange={handleDateChange} pricing={pricingForMonth} onMonthChange={onMonthChange} />
               </div>
             </div>
           )}
 
           {tab === "calendar" && (
             <div className="mt-8 lg:mt-8.5">
-              <CalendarSection service={resolvedService} date={date} onChange={handleDateChange} pricing={pricingForMonth} onMonthChange={onMonthChange} />
+              <CalendarSection service={resolvedService} date={date} checkOut={nightly ? checkOut : null} rangeMode={nightly} onChange={handleDateChange} pricing={pricingForMonth} onMonthChange={onMonthChange} />
             </div>
           )}
 
@@ -511,7 +538,7 @@ const ServiceDetail = () => {
                       type="date"
                       value={date}
                       min={toISODate(new Date())}
-                      onChange={(event) => event.target.value && handleDateChange(event.target.value)}
+                      onChange={(event) => event.target.value && handleCheckInInput(event.target.value)}
                       className="w-full cursor-pointer bg-transparent text-[12px] font-medium text-ocean-950 outline-none scheme-light"
                     />
                   </InfoField>
@@ -783,14 +810,16 @@ const ServiceDetail = () => {
   );
 };
 
-const CalendarSection = ({ service, date, onChange, pricing, onMonthChange }) => (
+const CalendarSection = ({ service, date, checkOut, rangeMode, onChange, pricing, onMonthChange }) => (
   <div className="rounded-xl bg-white px-3 pt-5.5 pb-7.5 lg:rounded-none lg:bg-transparent lg:p-0">
     <h3 className="text-[18px] font-semibold text-ocean-950 lg:text-[19px]">Tra cứu giá theo ngày</h3>
     <p className="mt-3.75 text-[10.5px] text-ink-500 lg:mt-2.75 lg:text-[11px]">
-      Giá tham khảo cho 01 phòng {service.roomType?.replace("Phòng ", "") || "Deluxe"} · 02 người lớn
+      {rangeMode
+        ? "Chọn ngày nhận phòng rồi chọn ngày trả phòng trên lịch để tính tổng theo số đêm"
+        : `Giá tham khảo cho 01 phòng ${service.roomType?.replace("Phòng ", "") || "Deluxe"} · 02 người lớn`}
     </p>
     <div className="mt-7.25 lg:mt-7.5">
-      <PriceCalendar service={service} value={date} onChange={onChange} pricing={pricing} onMonthChange={onMonthChange} />
+      <PriceCalendar service={service} value={date} endDate={checkOut} rangeMode={rangeMode} onChange={onChange} pricing={pricing} onMonthChange={onMonthChange} />
     </div>
   </div>
 );

@@ -18,8 +18,8 @@ const LegendDot = ({ className }) => (
   <span className={cn("inline-block h-2.5 w-2.5 rounded-[3px]", className)} />
 );
 
-/** Lịch giá đúng Figma: ô 103×61 desktop, 43×45 mobile, gap 7/4. */
-const PriceCalendar = ({ service, value, onChange, pricing, onMonthChange }) => {
+/** Lịch giá: chọn 1 ngày hoặc chọn khoảng (nhận phòng – trả phòng) theo số đêm. */
+const PriceCalendar = ({ service, value, endDate, rangeMode, onChange, pricing, onMonthChange }) => {
   const selectedDate = value ? new Date(`${value}T00:00:00`) : new Date();
   const [cursor, setCursor] = useState(
     () => new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1)
@@ -47,6 +47,8 @@ const PriceCalendar = ({ service, value, onChange, pricing, onMonthChange }) => 
 
   const rule = pricing?.rule || null;
   const priceOf = (date) => (pricing ? computePriceForDate(service, date, pricing) : getPriceForDate(service, date, rule));
+
+  const hasRange = rangeMode && value && endDate && endDate > value;
 
   return (
     <div>
@@ -90,25 +92,33 @@ const PriceCalendar = ({ service, value, onChange, pricing, onMonthChange }) => 
           const iso = toISODate(date);
           const type = getDayType(date, rule);
           const price = priceOf(date);
-          const active = value === iso;
+
+          const isStart = value === iso;
+          const isEnd = rangeMode && endDate === iso;
+          const inStay = hasRange && iso >= value && iso < endDate; 
+          const active = rangeMode ? (isStart || inStay) : isStart;
+          const rangeEdge = isStart || (isEnd && hasRange);
 
           return (
             <button
               key={iso}
               type="button"
               onClick={() => onChange(iso)}
-              aria-pressed={active}
+              aria-pressed={active || isEnd}
+              title={rangeMode ? (isStart ? "Nhận phòng" : isEnd ? "Trả phòng" : inStay ? "Đêm lưu trú" : undefined) : undefined}
               className={cn(
                 "flex h-11.25 flex-col cursor-pointer items-start justify-between rounded-lg px-1.75 py-1.25 text-left transition md:h-15.25 md:px-2.25 md:py-1.5",
-                type.id === "weekend" ? "border-2 border-ocean-600" : type.id === "holiday" ? "bg-amber-50" : type.id === "otherDays" ? "bg-sky-50" : "bg-ocean-50",
+                !active && !isEnd && (type.id === "weekend" ? "border-2 border-ocean-600" : type.id === "holiday" ? "bg-amber-50" : type.id === "otherDays" ? "bg-sky-50" : "bg-ocean-50"),
                 active && "bg-ocean-600",
-                !active && "hover:bg-ocean-100/70"
+                !active && isEnd && "bg-sea-200 ring-2 ring-ocean-600/50",
+                !active && !isEnd && "hover:bg-ocean-100/70",
+                inStay && !isStart && "ring-1 ring-ocean-500/30"
               )}
             >
               <span
                 className={cn(
                   "text-[10.5px] leading-none font-semibold md:text-[12.5px]",
-                  active ? "text-white" : "text-ocean-950"
+                  active ? "text-white" : isEnd ? "text-ocean-950" : "text-ocean-950"
                 )}
               >
                 {date.getDate()}
@@ -128,7 +138,7 @@ const PriceCalendar = ({ service, value, onChange, pricing, onMonthChange }) => 
       </div>
 
       <p className="mt-[21px] text-[10.5px] leading-relaxed text-ink-500 md:hidden">
-        Giá / phòng / đêm - “tr” = triệu VND
+        {rangeMode ? "Chọn ngày nhận phòng, sau đó chọn ngày trả phòng · Giá / phòng / đêm" : "Giá / phòng / đêm - “tr” = triệu VND"}
       </p>
 
       <div className="mt-[19px] flex flex-wrap items-center gap-x-5 gap-y-2 text-[10.5px] text-ink-600 md:mt-[34px] md:text-[11.5px]">
@@ -138,13 +148,26 @@ const PriceCalendar = ({ service, value, onChange, pricing, onMonthChange }) => 
         <span className="inline-flex items-center gap-2">
           <LegendDot className="border-2 border-ocean-600 ring-1 ring-sea-100" /> Cuối tuần
         </span>
-        <span className="inline-flex items-center gap-2">
-          <LegendDot className="bg-ocean-600" /> Ngày đang chọn
-        </span>
+        {rangeMode ? (
+          <>
+            <span className="inline-flex items-center gap-2">
+              <LegendDot className="bg-ocean-600" /> Đêm lưu trú (tính tiền)
+            </span>
+            <span className="inline-flex items-center gap-2">
+              <LegendDot className="bg-sea-200 ring-2 ring-ocean-600/50" /> Trả phòng
+            </span>
+          </>
+        ) : (
+          <span className="inline-flex items-center gap-2">
+            <LegendDot className="bg-ocean-600" /> Ngày đang chọn
+          </span>
+        )}
       </div>
 
       <p className="mt-[23px] hidden text-[10.5px] leading-relaxed text-ink-500 md:block md:text-[11.5px]">
-        Giá / phòng / đêm - Đã gồm ăn sáng - Dữ liệu minh họa
+        {rangeMode
+          ? "Bấm 1 lần chọn nhận phòng, bấm lần 2 chọn trả phòng (có thể chọn ở tháng khác). Tổng tiền = cộng giá các đêm lưu trú."
+          : "Giá / phòng / đêm - Đã gồm ăn sáng - Dữ liệu minh họa"}
       </p>
     </div>
   );
