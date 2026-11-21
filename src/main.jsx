@@ -11,6 +11,20 @@ import { fetchContent } from './redux/slices/contentSlice'
 import { fetchMe } from './redux/slices/authSlice'
 import { getToken } from './redux/Api/http'
 
+// Prevent pinch/double-tap zoom on mobile/tablet (especially iOS Safari).
+if (typeof document !== 'undefined') {
+  document.addEventListener('gesturestart', (e) => e.preventDefault(), { passive: false })
+  document.addEventListener('gesturechange', (e) => e.preventDefault(), { passive: false })
+  document.addEventListener('gestureend', (e) => e.preventDefault(), { passive: false })
+  document.addEventListener(
+    'touchmove',
+    (e) => {
+      if (e.touches && e.touches.length > 1) e.preventDefault()
+    },
+    { passive: false }
+  )
+}
+
 const Bootstrap = ({ children }) => {
   useEffect(() => {
     store.dispatch(fetchCategories())
