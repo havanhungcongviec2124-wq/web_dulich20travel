@@ -54,6 +54,30 @@ const fallbackAmenities = (service) =>
       : item
   );
 
+const addDaysISO = (iso, days) => {
+  const d = new Date(`${iso}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return iso;
+  d.setDate(d.getDate() + days);
+  return toISODate(d);
+};
+
+const diffNights = (checkIn, checkOut) => {
+  const a = new Date(`${checkIn}T00:00:00`);
+  const b = new Date(`${checkOut}T00:00:00`);
+  if (Number.isNaN(a.getTime()) || Number.isNaN(b.getTime())) return 1;
+  const ms = b.getTime() - a.getTime();
+  return Math.max(1, Math.round(ms / 86400000));
+};
+
+const isNightlyService = (service) => {
+  if (!service) return false;
+  const unit = String(service.priceUnit || "").toLowerCase();
+  if (unit.includes("đêm") || unit.includes("night")) return true;
+  const cat = String(service.category || service.categoryId || service.categoryKey || "").toLowerCase();
+  if (cat === "hotel" || cat === "cruise-night" || cat === "cruise_night") return true;
+  return false;
+};
+
 const InfoField = ({ label, children }) => (
   <label className="block">
     <span className="mb-2 block text-[11px] font-medium text-ink-500">{label}</span>
@@ -76,6 +100,7 @@ const ServiceDetail = () => {
   const company = { ...defaultCompany, ...(content?.company || {}) };
 
   const [date, setDate] = useState(defaultDate);
+  const [checkOut, setCheckOut] = useState(() => addDaysISO(defaultDate, 1));
   const [tab, setTab] = useState("overview");
   const [lightbox, setLightbox] = useState(false);
   const [viewerIndex, setViewerIndex] = useState(null);
@@ -100,10 +125,57 @@ const ServiceDetail = () => {
     if (date) setCalendarMonth((prev) => (prev === date.slice(0, 7) ? prev : date.slice(0, 7)));
   }, [date]);
 
+  const nightly = isNightlyService(resolvedService);
+  const nights = nightly ? diffNights(date, checkOut) : 1;
+  const stayMonths = useMemo(() => {
+    if (!nightly) return date ? [date.slice(0, 7)] : [];
+    const months = new Set();
+    const start = new Date(`${date}T00:00:00`);
+    const end = new Date(`${checkOut}T00:00:00`);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return date ? [date.slice(0, 7)] : [];
+    const cur = new Date(start);
+    while (cur < end) {
+      const key = `${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, "0")}`;
+      months.add(key);
+      cur.setDate(cur.getDate() + 1);
+    }
+    if (months.size === 0 && date) months.add(date.slice(0, 7));
+    return Array.from(months);
+  }, [nightly, date, checkOut]);
+
   useEffect(() => {
-    if (!serviceCode || !calendarMonth) return;
-    dispatch(fetchCalendar({ serviceCode, month: calendarMonth, packageId: "default" }));
-  }, [dispatch, serviceCode, calendarMonth]);
+    if (!serviceCode) return;
+    const months = nightly ? Array.from(new Set([calendarMonth, ...stayMonths].filter(Boolean))) : [calendarMonth].filter(Boolean);
+    months.forEach((m) => dispatch(fetchCalendar({ serviceCode, month: m, packageId: "default" })));
+  }, [dispatch, serviceCode, calendarMonth, nightly, stayMonths]);
+
+  const handleDateChange = (nextDate) => {
+    if (!nextDate) return;
+    setDate(nextDate);
+    if (nightly) {
+      setCheckOut((prev) => {
+        const p = prev && new Date(`${prev}T00:00:00`) > new Date(`${nextDate}T00:00:00`) ? prev : addDaysISO(nextDate, 1);
+        return p;
+      });
+    }
+  };
+
+  const handleCheckOutChange = (nextOut) => {
+    if (!nextOut) return;
+    const minOut = addDaysISO(date, 1);
+    setCheckOut(new Date(`${nextOut}T00:00:00`) <= new Date(`${date}T00:00:00`) ? minOut : nextOut);
+  };
+
+  const pricingFor = useCallback(
+    (isoDate) => {
+      if (!serviceCode || !isoDate) return null;
+      const month = String(isoDate).slice(0, 7);
+      const cal = calendars[`${serviceCode}|default|${month}`];
+      if (!cal) return null;
+      return { rule: cal.rule || null, dailyMap: getDailyPriceMap(cal.daily || []) };
+    },
+    [calendars, serviceCode]
+  );
 
   const calendarData = useMemo(() => {
     if (!serviceCode || !calendarMonth) return null;
@@ -156,6 +228,31 @@ const ServiceDetail = () => {
   const price = pricingForMonth
     ? computePriceForDate(resolvedService, selectedDateObj, pricingForMonth)
     : computePriceForDate(resolvedService, selectedDateObj);
+
+  const nightDetails = nightly
+    ? (() => {
+        const details = [];
+        const start = new Date(`${date}T00:00:00`);
+        const end = new Date(`${checkOut}T00:00:00`);
+        if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) {
+          const p = pricingFor(date);
+          return [{ date, price: p ? computePriceForDate(resolvedService, start, p) : computePriceForDate(resolvedService, start) }];
+        }
+        const cur = new Date(start);
+        while (cur < end) {
+          const iso = toISODate(cur);
+          const p = pricingFor(iso);
+          details.push({
+            date: iso,
+            price: p ? computePriceForDate(resolvedService, new Date(cur), p) : computePriceForDate(resolvedService, new Date(cur)),
+          });
+          cur.setDate(cur.getDate() + 1);
+        }
+        return details.length ? details : [{ date, price }];
+      })()
+    : [];
+  const totalPrice = nightly ? nightDetails.reduce((sum, n) => sum + (Number(n.price) || 0), 0) : price;
+
   const unit = resolvedService.priceUnit ? `/ ${resolvedService.priceUnit}` : "";
   const gallery = [...new Set([resolvedService.image, resolvedService.secondaryImage, ...(resolvedService.gallery || [])].filter(Boolean))];
   const categoryName = String(resolvedService.category || "").startsWith("cruise")
@@ -293,14 +390,14 @@ const ServiceDetail = () => {
               </div>
 
               <div className="mt-7.75 lg:mt-10">
-                <CalendarSection service={resolvedService} date={date} onChange={setDate} pricing={pricingForMonth} onMonthChange={onMonthChange} />
+                <CalendarSection service={resolvedService} date={date} onChange={handleDateChange} pricing={pricingForMonth} onMonthChange={onMonthChange} />
               </div>
             </div>
           )}
 
           {tab === "calendar" && (
             <div className="mt-8 lg:mt-8.5">
-              <CalendarSection service={resolvedService} date={date} onChange={setDate} pricing={pricingForMonth} onMonthChange={onMonthChange} />
+              <CalendarSection service={resolvedService} date={date} onChange={handleDateChange} pricing={pricingForMonth} onMonthChange={onMonthChange} />
             </div>
           )}
 
@@ -378,31 +475,89 @@ const ServiceDetail = () => {
 
         {/* Cột phải */}
         <div className="mt-5 flex flex-col gap-5 lg:mt-0 lg:block lg:space-y-6">
-          <aside className="rounded-xl bg-white p-[18px] lg:h-[510px] lg:px-[26px] lg:py-6">
+          <aside className="rounded-xl bg-white p-[18px] lg:min-h-[510px] lg:px-[26px] lg:py-6">
             <p className="text-[10.5px] font-medium tracking-[0.02em] text-ink-500 uppercase">
-              Giá ngày {formatDate(date)}
+              {nightly ? `Tổng cộng (${nights} đêm)` : `Giá ngày ${formatDate(date)}`}
             </p>
             <p className="mt-[20px] text-[28px] leading-none font-bold tracking-[-0.01em] text-ocean-950 lg:mt-[27px]">
-              {formatCurrency(price, "đ").replace(" đ", "đ")}
+              {formatCurrency(nightly ? totalPrice : price, "đ").replace(" đ", "đ")}
             </p>
             <p className="mt-4.75 text-[11.5px] text-ink-500 lg:mt-5.75">
-              {unit}
-              <span className="text-ocean-300"> - </span>
-              <span className="lg:hidden">Đã gồm ăn sáng</span>
-              <span className="hidden lg:inline">{resolvedService.roomType || "Đã gồm ăn sáng"}</span>
+              {nightly ? (
+                <>
+                  {nights} đêm · {formatDate(date)} – {formatDate(checkOut)}
+                </>
+              ) : (
+                <>
+                  {unit}
+                  <span className="text-ocean-300"> - </span>
+                  <span className="lg:hidden">Đã gồm ăn sáng</span>
+                  <span className="hidden lg:inline">{resolvedService.roomType || "Đã gồm ăn sáng"}</span>
+                </>
+              )}
             </p>
+            {nightly && nights > 1 && (
+              <p className="mt-1.5 text-[10.5px] text-ink-500">
+                Trung bình {formatCurrency(Math.round(totalPrice / nights), "đ").replace(" đ", "đ")} / đêm
+              </p>
+            )}
 
-            <div className="mt-6.5 hidden lg:mt-6.75 lg:block lg:space-y-4">
-              <InfoField label="Ngày sử dụng">
-                <CalendarDays className="h-4 w-4 shrink-0 text-sea-600" />
-                <input
-                  type="date"
-                  value={date}
-                  min={toISODate(new Date())}
-                  onChange={(event) => event.target.value && setDate(event.target.value)}
-                  className="w-full cursor-pointer bg-transparent text-[12px] font-medium text-ocean-950 outline-none scheme-light"
-                />
-              </InfoField>
+            <div className="mt-6.5 space-y-4 lg:mt-6.75">
+              {nightly ? (
+                <>
+                  <InfoField label="Nhận phòng">
+                    <CalendarDays className="h-4 w-4 shrink-0 text-sea-600" />
+                    <input
+                      type="date"
+                      value={date}
+                      min={toISODate(new Date())}
+                      onChange={(event) => event.target.value && handleDateChange(event.target.value)}
+                      className="w-full cursor-pointer bg-transparent text-[12px] font-medium text-ocean-950 outline-none scheme-light"
+                    />
+                  </InfoField>
+                  <InfoField label="Trả phòng">
+                    <CalendarDays className="h-4 w-4 shrink-0 text-sea-600" />
+                    <input
+                      type="date"
+                      value={checkOut}
+                      min={addDaysISO(date, 1)}
+                      onChange={(event) => event.target.value && handleCheckOutChange(event.target.value)}
+                      className="w-full cursor-pointer bg-transparent text-[12px] font-medium text-ocean-950 outline-none scheme-light"
+                    />
+                  </InfoField>
+                  <div className="rounded-xl bg-ocean-50 px-4 py-3 text-[12px] text-ocean-900">
+                    <div className="flex items-center justify-between font-medium">
+                      <span>Số đêm</span>
+                      <span>{nights} đêm</span>
+                    </div>
+                    {nightDetails.length > 0 && (
+                      <div className="mt-2 space-y-1 text-[11px] text-ink-600">
+                        {nightDetails.map((n) => (
+                          <div key={n.date} className="flex items-center justify-between gap-3">
+                            <span>{formatDate(n.date)}</span>
+                            <span className="font-medium text-ocean-950">
+                              {formatCurrency(n.price, "đ").replace(" đ", "đ")}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <div className="hidden lg:block">
+                  <InfoField label="Ngày sử dụng">
+                    <CalendarDays className="h-4 w-4 shrink-0 text-sea-600" />
+                    <input
+                      type="date"
+                      value={date}
+                      min={toISODate(new Date())}
+                      onChange={(event) => event.target.value && handleDateChange(event.target.value)}
+                      className="w-full cursor-pointer bg-transparent text-[12px] font-medium text-ocean-950 outline-none scheme-light"
+                    />
+                  </InfoField>
+                </div>
+              )}
 
               <InfoField label="Số khách">
                 <select
